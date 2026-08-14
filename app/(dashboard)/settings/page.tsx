@@ -1,0 +1,54 @@
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { PageHeader } from "@/components/layout/page-header"
+import { BillingSection } from "@/components/settings/billing-section"
+
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id, full_name, organizations(name)")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile?.organization_id) redirect("/login")
+
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("*, subscription_plans(*)")
+    .eq("organization_id", profile.organization_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  const { count: usageCount } = await supabase
+    .from("usage_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", profile.organization_id)
+    .gte("billing_period_start", subscription?.current_period_start ?? new Date(0).toISOString())
+
+  const { data: plans } = await supabase
+    .from("subscription_plans")
+    .select("*")
+    .order("price_azn", { ascending: true })
+
+  const orgName = (profile?.organizations as unknown as { name: string } | null)?.name ?? ""
+
+  return (
+    <div>
+      <PageHeader title="Parametrlər" description="Abunəlik planı və hesab məlumatları" />
+      <BillingSection
+        currentPlan={subscription?.subscription_plans as Record<string, unknown> | null}
+        subscriptionStatus={subscription?.status ?? "active"}
+        periodEnd={subscription?.current_period_end ?? ""}
+        usageCount={usageCount ?? 0}
+        allPlans={plans ?? []}
+        orgName={orgName}
+        userEmail={user.email ?? ""}
+      />
+    </div>
+  )
+}
