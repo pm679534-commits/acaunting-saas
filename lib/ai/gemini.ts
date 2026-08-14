@@ -45,35 +45,43 @@ function parseExtractionJson(text: string): ExtractionResult {
 
 export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI;
-  private modelName: string;
+  private modelFallbackChain: string[];
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY environment variable is not set");
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+    this.modelFallbackChain = [
+      "gemini-2.5-flash-latest",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+    ];
   }
 
-  async extractFromDocument(
-    fileBuffer: Buffer,
-    mimeType: string
+  private isModelNotFoundError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("404") ||
+      message.includes("not found") ||
+      message.includes("does not exist") ||
+      message.includes("billing") ||
+      message.includes("quota") ||
+      message.includes("permission")
+    );
+  }
+
+  private async tryExtractWithModel(
+    modelName: string,
+    filePart: Part
   ): Promise<ExtractionResult> {
-    const model = this.genAI.getGenerativeModel({ model: this.modelName });
+    const model = this.genAI.getGenerativeModel({ model: modelName });
 
-    const filePart: Part = {
-      inlineData: {
-        data: fileBuffer.toString("base64"),
-        mimeType: mimeType as Parameters<typeof model.generateContent>[0] extends infer T ? string : string,
-      },
-    };
-
-    // First attempt
     try {
       const result = await model.generateContent([EXTRACTION_PROMPT, filePart]);
       const text = result.response.text();
       return parseExtractionJson(text);
     } catch (firstError) {
-      // Retry once with a stricter prompt
       try {
         const result = await model.generateContent([
           STRICT_EXTRACTION_PROMPT,
@@ -82,10 +90,45 @@ export class GeminiProvider implements AIProvider {
         const text = result.response.text();
         return parseExtractionJson(text);
       } catch {
-        throw new Error(
-          `Gemini extraction failed after retry: ${firstError instanceof Error ? firstError.message : String(firstError)}`
-        );
+        throw firstError;
       }
     }
+  }
+
+  async extractFromDocument(
+    fileBuffer: Buffer,
+    mimeType: string
+  ): Promise<ExtractionResult> {
+    const filePart: Part = {
+      inlineData: {
+        data: fileBuffer.toString("base64"),
+        mimeType: mimeType as Parameters<typeof this.genAI.getGenerativeModel({ model: "" }).generateContent>[0] extends infer T ? string : string,
+      },
+    };
+
+    let lastError: Error | null = null;
+
+    for (const modelName of this.modelFallbackChain) {
+      try {
+        const result = await this.tryExtractWithModel(modelName, filePart);
+        console.log(`Gemini extraction succeeded with model: ${modelName}`);
+        return result;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (this.isModelNotFoundError(error)) {
+          console.log(`Model ${modelName} not available, trying next fallback`);
+          continue;
+        } else {
+          throw new Error(
+            `Gemini extraction failed with ${modelName}: ${lastError.message}`
+          );
+        }
+      }
+    }
+
+    throw new Error(
+      `All Gemini models failed. Last error: ${lastError?.message ?? "Unknown error"}`
+    );
   }
 }
