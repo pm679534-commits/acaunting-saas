@@ -102,7 +102,7 @@ export class GeminiProvider implements AIProvider {
     const filePart: Part = {
       inlineData: {
         data: fileBuffer.toString("base64"),
-        mimeType: mimeType as Parameters<typeof this.genAI.getGenerativeModel({ model: "" }).generateContent>[0] extends infer T ? string : string,
+        mimeType,
       },
     };
 
