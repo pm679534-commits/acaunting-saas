@@ -53,21 +53,32 @@ export default async function DashboardPage({
 
   const { data: documents, count } = await query
 
-  // Usage this billing period
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit, name)")
-    .eq("organization_id", profile.organization_id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single()
+  // Fetch subscription and usage in parallel
+  const [subscriptionResult, usageResult] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit, name)")
+      .eq("organization_id", profile.organization_id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("usage_logs")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", profile.organization_id)
+  ])
 
-  const { count: usageCount } = await supabase
-    .from("usage_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("organization_id", profile.organization_id)
-    .gte("billing_period_start", subscription?.current_period_start ?? new Date(0).toISOString())
+  const subscription = subscriptionResult.data
+
+  // Only fetch usage count if subscription exists
+  const usageCount = subscription
+    ? (await supabase
+        .from("usage_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", profile.organization_id)
+        .gte("billing_period_start", subscription.current_period_start ?? new Date(0).toISOString())).count
+    : 0
 
   const plan = subscription?.subscription_plans as unknown as { document_limit: number; name: string } | null
 

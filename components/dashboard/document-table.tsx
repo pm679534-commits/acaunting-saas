@@ -46,6 +46,7 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporting, setExporting] = useState(false)
+  const [exporting1C, setExporting1C] = useState(false)
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -65,10 +66,12 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
     }
   }
 
-  async function handleExport() {
-    setExporting(true)
+  async function handleExport(format: "excel" | "1c" = "excel") {
+    const isExcel = format === "excel"
+    isExcel ? setExporting(true) : setExporting1C(true)
     try {
-      const res = await fetch("/api/export", {
+      const endpoint = isExcel ? "/api/export" : "/api/export-1c"
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentIds: selectedIds.size > 0 ? Array.from(selectedIds) : undefined }),
@@ -78,13 +81,15 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `hesab-senedler-${new Date().toISOString().split("T")[0]}.xlsx`
+      const extension = isExcel ? "xlsx" : "xml"
+      const prefix = isExcel ? "hesab-senedler" : "1c-senedler"
+      a.download = `${prefix}-${new Date().toISOString().split("T")[0]}.${extension}`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error(err)
     } finally {
-      setExporting(false)
+      isExcel ? setExporting(false) : setExporting1C(false)
     }
   }
 
@@ -102,23 +107,34 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
 
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 gap-4 flex-wrap">
         <p className="text-sm text-slate-500">
           Cəmi <span className="font-medium text-slate-900">{totalCount}</span> sənəd
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={exporting}
-        >
-          {exporting ? <Loader2 className="animate-spin" /> : null}
-          {selectedIds.size > 0 ? `${selectedIds.size} sənədi` : "Hamısını"} export et
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport("excel")}
+            disabled={exporting || exporting1C}
+          >
+            {exporting ? <Loader2 className="animate-spin" /> : null}
+            Excel ({selectedIds.size > 0 ? selectedIds.size : "hamısı"})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport("1c")}
+            disabled={exporting || exporting1C}
+          >
+            {exporting1C ? <Loader2 className="animate-spin" /> : null}
+            1C XML ({selectedIds.size > 0 ? selectedIds.size : "hamısı"})
+          </Button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/50">
               <th className="w-10 pl-4 py-3">
@@ -129,12 +145,12 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
                   className="rounded border-slate-300"
                 />
               </th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Fayl adı</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Status</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Satıcı</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Məbləğ</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Tarix</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-500">Yüklənmə</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Fayl adı</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Status</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Satıcı</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Məbləğ</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Tarix</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-500 text-xs sm:text-sm">Yüklənmə</th>
               <th className="w-12 py-3 px-4" />
             </tr>
           </thead>

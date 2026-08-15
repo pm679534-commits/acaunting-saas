@@ -145,7 +145,7 @@ export function BillingSection({
             return (
               <div
                 key={plan.id}
-                className={`rounded-xl border-2 p-6 flex flex-col transition-all ${
+                className={`rounded-xl border-2 p-5 sm:p-6 flex flex-col transition-all ${
                   isCurrent
                     ? "border-primary bg-primary/5"
                     : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"

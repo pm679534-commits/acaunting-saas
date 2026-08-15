@@ -19,23 +19,23 @@ export default function LandingPage() {
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <FileText className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-slate-900 text-lg">HesabSənəd</span>
+          <span className="font-semibold text-slate-900 text-base sm:text-lg">HesabSənəd</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8">
           <a href="#how-it-works" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Necə işləyir</a>
           <a href="#pricing" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Qiymətlər</a>
         </nav>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/login">Daxil ol</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/signup">Pulsuz başla</Link>
+            <Link href="/signup">Başla</Link>
           </Button>
         </div>
       </div>
@@ -45,20 +45,20 @@ function Nav() {
 
 function Hero() {
   return (
-    <section className="relative pt-24 pb-20 overflow-hidden">
+    <section className="relative pt-16 sm:pt-24 pb-12 sm:pb-20 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 via-white to-white pointer-events-none" />
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      <div className="relative max-w-6xl mx-auto px-6 text-center">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary text-sm font-medium px-4 py-1.5 mb-8">
           <Zap className="w-3.5 h-3.5" />
           AI ilə dəstəklənən mühasibat avtomatlaşdırması
         </div>
-        <h1 className="text-5xl md:text-6xl font-bold text-slate-900 leading-[1.1] tracking-tight mb-6">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 leading-[1.1] tracking-tight mb-6">
           Fakturalarınızı{" "}
           <span className="text-primary">saniyələr</span>{" "}
           ərzində emal edin
         </h1>
-        <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
           Sənədlərinizi yükləyin, süni intellekt məlumatları avtomatik çıxartsın — tarix, məbləğ, satıcı adı, VÖEN.
           Nəticəni yoxlayın və Excel-ə ixrac edin.
         </p>
@@ -148,15 +148,15 @@ function HowItWorks() {
   ]
 
   return (
-    <section id="how-it-works" className="py-24 bg-slate-50/50">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Necə işləyir?</h2>
-          <p className="text-lg text-slate-600 max-w-xl mx-auto">
+    <section id="how-it-works" className="py-16 sm:py-24 bg-slate-50/50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4">Necə işləyir?</h2>
+          <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto">
             3 sadə addımda saatlarca əl işini avtomatlaşdırın
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-8 relative">
+        <div className="grid md:grid-cols-3 gap-6 sm:gap-8 relative">
           <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-px bg-slate-200" />
           {steps.map(({ icon, step, title, desc }) => (
             <div key={step} className="relative flex flex-col items-center text-center">
@@ -187,13 +187,13 @@ function Features() {
   ]
 
   return (
-    <section className="py-24">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Niyə HesabSənəd?</h2>
-          <p className="text-lg text-slate-600">Azərbaycan mühasibat firmaları üçün xüsusi hazırlanmış</p>
+    <section className="py-16 sm:py-24">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4">Niyə HesabSənəd?</h2>
+          <p className="text-base sm:text-lg text-slate-600">Azərbaycan mühasibat firmaları üçün xüsusi hazırlanmış</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {features.map(({ icon, title, desc }) => (
             <div key={title} className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-md hover:border-slate-300 transition-all duration-200">
               <div className="text-2xl mb-3">{icon}</div>
@@ -240,13 +240,13 @@ function Pricing() {
   ]
 
   return (
-    <section id="pricing" className="py-24 bg-slate-50/50">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Şəffaf qiymətlər</h2>
-          <p className="text-lg text-slate-600">Biznesinizin həcminə uyğun plan seçin</p>
+    <section id="pricing" className="py-16 sm:py-24 bg-slate-50/50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4">Şəffaf qiymətlər</h2>
+          <p className="text-base sm:text-lg text-slate-600">Biznesinizin həcminə uyğun plan seçin</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
           {plans.map(({ name, price, limit, features, cta, highlight, link }) => (
             <div
               key={name}
@@ -303,13 +303,13 @@ function Pricing() {
 
 function CTA() {
   return (
-    <section className="py-24">
-      <div className="max-w-3xl mx-auto px-6 text-center">
-        <div className="rounded-3xl bg-gradient-to-br from-primary to-indigo-700 p-12 text-white">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+    <section className="py-16 sm:py-24">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary to-indigo-700 p-8 sm:p-12 text-white">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
             Bugün başlayın
           </h2>
-          <p className="text-lg text-indigo-200 mb-8 max-w-xl mx-auto">
+          <p className="text-base sm:text-lg text-indigo-200 mb-6 sm:mb-8 max-w-xl mx-auto">
             Hər ay saatlarla əl işini aradan qaldırın. 3 gün pulsuz sınayın, heç bir öhdəlik olmadan.
           </p>
           <Button size="lg" variant="secondary" asChild className="px-10">
@@ -326,9 +326,9 @@ function CTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-200 py-12">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="border-t border-slate-200 py-8 sm:py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
               <FileText className="w-3.5 h-3.5 text-white" />

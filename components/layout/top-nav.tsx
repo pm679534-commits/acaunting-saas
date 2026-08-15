@@ -35,10 +35,10 @@ export function TopNav({ orgName, userEmail }: TopNavProps) {
     .toUpperCase()
 
   return (
-    <header className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-500">Şirkət:</span>
-        <span className="text-sm font-medium text-slate-900">{orgName}</span>
+    <header className="h-16 border-b border-slate-200 bg-white px-6 lg:px-6 pl-16 lg:pl-6 flex items-center justify-between">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm text-slate-500 hidden sm:inline">Şirkət:</span>
+        <span className="text-sm font-medium text-slate-900 truncate">{orgName}</span>
       </div>
 
       <DropdownMenu>

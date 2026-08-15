@@ -16,24 +16,29 @@ export default async function SettingsPage() {
 
   if (!profile?.organization_id) redirect("/login")
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("*, subscription_plans(*)")
-    .eq("organization_id", profile.organization_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single()
+  // Fetch subscription, plans, and usage in parallel
+  const [subscriptionResult, plansResult] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("*, subscription_plans(*)")
+      .eq("organization_id", profile.organization_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("subscription_plans")
+      .select("*")
+      .order("price_azn", { ascending: true })
+  ])
+
+  const subscription = subscriptionResult.data
+  const plans = plansResult.data
 
   const { count: usageCount } = await supabase
     .from("usage_logs")
     .select("*", { count: "exact", head: true })
     .eq("organization_id", profile.organization_id)
     .gte("billing_period_start", subscription?.current_period_start ?? new Date(0).toISOString())
-
-  const { data: plans } = await supabase
-    .from("subscription_plans")
-    .select("*")
-    .order("price_azn", { ascending: true })
 
   const orgName = (profile?.organizations as unknown as { name: string } | null)?.name ?? ""
 

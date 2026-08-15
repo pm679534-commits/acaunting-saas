@@ -75,13 +75,13 @@ function FieldRow({ label, fieldKey, value, editedValue, onEdit, confidence, typ
 
   return (
     <tr className="border-b border-slate-100 last:border-0">
-      <td className="py-3.5 px-5 w-48">
+      <td className="py-3.5 px-4 sm:px-5 w-36 sm:w-48">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-500">{label}</span>
+          <span className="text-xs sm:text-sm font-medium text-slate-500">{label}</span>
           {confidence !== undefined && <ConfidenceDot confidence={confidence} />}
         </div>
       </td>
-      <td className="py-3 px-5">
+      <td className="py-3 px-4 sm:px-5">
         {editing ? (
           <div className="flex items-center gap-2">
             {type === "select-category" ? (
@@ -209,7 +209,7 @@ export function ReviewTable({ document: doc }: { document: Document }) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-semibold text-slate-900">Çıxarılmış məlumatlar</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">Ümumi etibarlılıq:</span>
@@ -221,19 +221,21 @@ export function ReviewTable({ document: doc }: { document: Document }) {
           </div>
         </div>
 
-        <table className="w-full">
-          <tbody>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <tbody>
             <FieldRow label="Tarix" fieldKey="date" value={base.date as string ?? null} editedValue={fields.date as string ?? null} onEdit={onEdit} confidence={confidence} type="date" />
             <FieldRow label="Satıcı adı" fieldKey="vendor_name" value={base.vendor_name as string ?? null} editedValue={fields.vendor_name as string ?? null} onEdit={onEdit} confidence={confidence} />
             <FieldRow label="VÖEN" fieldKey="tax_id" value={base.tax_id as string ?? null} editedValue={fields.tax_id as string ?? null} onEdit={onEdit} confidence={confidence} />
             <FieldRow label="Məbləğ" fieldKey="amount" value={base.amount as number ?? null} editedValue={fields.amount as number ?? null} onEdit={onEdit} confidence={confidence} type="number" />
             <FieldRow label="Valyuta" fieldKey="currency" value={base.currency as string ?? null} editedValue={fields.currency as string ?? null} onEdit={onEdit} confidence={confidence} type="select-currency" />
             <FieldRow label="Kateqoriya" fieldKey="category" value={base.category as string ?? null} editedValue={fields.category as string ?? null} onEdit={onEdit} confidence={confidence} type="select-category" />
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button onClick={handleSave} disabled={saving || saved}>
           {saving ? <Loader2 className="animate-spin" /> : saved ? <CheckCircle2 className="text-emerald-400" /> : null}
           {saved ? "Saxlanıldı" : "Dəyişiklikləri saxla"}
