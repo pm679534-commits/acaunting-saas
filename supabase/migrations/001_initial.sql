@@ -71,7 +71,7 @@ create table subscriptions (
   plan_id               text not null references subscription_plans(id),
   status                text default 'active' check (status in ('active','past_due','cancelled','trialing')),
   current_period_start  timestamptz not null default now(),
-  current_period_end    timestamptz not null default (now() + interval '30 days'),
+  current_period_end    timestamptz not null default (now() + interval '3 days'),
   created_at            timestamptz default now()
 );
 

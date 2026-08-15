@@ -179,7 +179,7 @@ export function BillingSection({
                   <Button variant="outline" disabled className="w-full">Aktiv plan</Button>
                 ) : plan.price_azn === 0 ? (
                   <Button variant="outline" className="w-full" asChild>
-                    <a href="mailto:sales@hesabsenед.az">Bizimlə əlaqə</a>
+                    <a href="https://wa.me/994775250891" target="_blank" rel="noopener noreferrer">Bizimlə əlaqə</a>
                   </Button>
                 ) : (
                   <Button

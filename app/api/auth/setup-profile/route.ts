@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       plan_id: "starter",
       status: "trialing",
       current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      current_period_end: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     })
 
     if (subError) throw subError

@@ -59,13 +59,13 @@ function Hero() {
           ərzində emal edin
         </h1>
         <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Sənədlərinizi yükləyin, Gemini AI məlumatları avtomatik çıxartsın — tarix, məbləğ, satıcı adı, VÖEN.
+          Sənədlərinizi yükləyin, süni intellekt məlumatları avtomatik çıxartsın — tarix, məbləğ, satıcı adı, VÖEN.
           Nəticəni yoxlayın və Excel-ə ixrac edin.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button size="lg" asChild className="px-8">
             <Link href="/signup">
-              30 gün pulsuz sınayın
+              3 gün pulsuz sınayın
               <ArrowRight className="w-4 h-4" />
             </Link>
           </Button>
@@ -137,7 +137,7 @@ function HowItWorks() {
       icon: "🤖",
       step: "2",
       title: "AI avtomatik emal edir",
-      desc: "Gemini AI sənədi oxuyur, tarix, məbləğ, satıcı adı və VÖEN-ni avtomatik müəyyən edir.",
+      desc: "Süni intellekt sənədi oxuyur, tarix, məbləğ, satıcı adı və VÖEN-ni avtomatik müəyyən edir.",
     },
     {
       icon: "📊",
@@ -179,7 +179,7 @@ function HowItWorks() {
 function Features() {
   const features = [
     { icon: "⚡", title: "Sürətli emal", desc: "Hər sənəd 15–30 saniyə ərzində emal olunur" },
-    { icon: "🎯", title: "Yüksək dəqiqlik", desc: "Gemini AI ilə 95%+ çıxarma dəqiqliyi" },
+    { icon: "🎯", title: "Yüksək dəqiqlik", desc: "Süni intellekt ilə 95%+ çıxarma dəqiqliyi" },
     { icon: "🔒", title: "Təhlükəsizlik", desc: "Məlumatlarınız şifrələnmiş şəkildə saxlanılır" },
     { icon: "📋", title: "Excel ixrac", desc: "Standart mühasibat formatında .xlsx faylı" },
     { icon: "✏️", title: "Redaktə imkanı", desc: "Hər hansı sahəni asanlıqla düzəldə bilərsiniz" },
@@ -234,6 +234,7 @@ function Pricing() {
       limit: "Limitsiz",
       features: ["Limitsiz sənəd", "Excel & API export", "Xüsusi inteqrasiya", "SLA zəmanəti", "Fərdi onboarding"],
       cta: "Bizimlə əlaqə",
+      link: "https://wa.me/994775250891",
       highlight: false,
     },
   ]
@@ -246,7 +247,7 @@ function Pricing() {
           <p className="text-lg text-slate-600">Biznesinizin həcminə uyğun plan seçin</p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
-          {plans.map(({ name, price, limit, features, cta, highlight }) => (
+          {plans.map(({ name, price, limit, features, cta, highlight, link }) => (
             <div
               key={name}
               className={`rounded-2xl p-8 flex flex-col border-2 transition-all ${
@@ -284,16 +285,16 @@ function Pricing() {
                 variant={highlight ? "secondary" : "default"}
                 className={`w-full ${highlight ? "bg-white text-primary hover:bg-white/90" : ""}`}
               >
-                <Link href={price ? "/signup" : "mailto:sales@hesabsenəd.az"}>
+                <a href={link || (price ? "/signup" : "mailto:sales@hesabsenəd.az")} target={link ? "_blank" : undefined} rel={link ? "noopener noreferrer" : undefined}>
                   {cta}
                   <ChevronRight className="w-4 h-4" />
-                </Link>
+                </a>
               </Button>
             </div>
           ))}
         </div>
         <p className="text-center text-sm text-slate-500 mt-8">
-          Bütün planlarda 30 günlük pulsuz sınaq dövrü daxildir. Kredit kartı tələb olunmur.
+          Bütün planlarda 3 günlük pulsuz sınaq dövrü daxildir. Kredit kartı tələb olunmur.
         </p>
       </div>
     </section>
@@ -309,7 +310,7 @@ function CTA() {
             Bugün başlayın
           </h2>
           <p className="text-lg text-indigo-200 mb-8 max-w-xl mx-auto">
-            Hər ay saatlarla əl işini aradan qaldırın. 30 gün pulsuz sınayın, heç bir öhdəlik olmadan.
+            Hər ay saatlarla əl işini aradan qaldırın. 3 gün pulsuz sınayın, heç bir öhdəlik olmadan.
           </p>
           <Button size="lg" variant="secondary" asChild className="px-10">
             <Link href="/signup">

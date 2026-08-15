@@ -218,7 +218,7 @@ export function Dropzone() {
       <div className="mt-6 grid grid-cols-3 gap-4">
         {[
           { step: "1", title: "Yükləyin", desc: "Faktura və ya qəbzinizi seçin" },
-          { step: "2", title: "AI emal edir", desc: "Gemini AI məlumatları çıxarır" },
+          { step: "2", title: "AI emal edir", desc: "Süni intellekt məlumatları çıxarır" },
           { step: "3", title: "Yoxlayın", desc: "Nəticəni yoxlayın və düzəldin" },
         ].map(({ step, title, desc }) => (
           <div key={step} className="text-center p-4 rounded-xl bg-slate-50 border border-slate-200">
