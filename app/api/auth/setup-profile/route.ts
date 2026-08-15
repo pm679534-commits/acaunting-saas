@@ -13,6 +13,20 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient()
 
+    // Check if profile already exists (user already registered)
+    const { data: existingProfile } = await (admin
+      .from("profiles") as any)
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: "Profil artıq mövcuddur", alreadyExists: true },
+        { status: 409 }
+      )
+    }
+
     // Create organization
     const { data: org, error: orgError } = await (admin
       .from("organizations") as any)
@@ -30,7 +44,16 @@ export async function POST(request: Request) {
       role: "owner",
     })
 
-    if (profileError) throw profileError
+    if (profileError) {
+      // Check for foreign key violation (23503) which means user doesn't exist in auth.users
+      if (profileError.code === "23503" || profileError.message?.includes("profiles_id_fkey")) {
+        return NextResponse.json(
+          { error: "İstifadəçi tapılmadı", alreadyExists: true },
+          { status: 409 }
+        )
+      }
+      throw profileError
+    }
 
     // Create starter subscription
     const { error: subError } = await (admin.from("subscriptions") as any).insert({

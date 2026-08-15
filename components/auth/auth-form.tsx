@@ -42,6 +42,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         if (signUpError) throw signUpError
         if (!data.user) throw new Error("İstifadəçi yaradılmadı")
 
+        // Detect if email already exists (Supabase may return success with empty identities)
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          throw new Error("Bu email ilə artıq hesab mövcuddur. Zəhmət olmasa daxil olun.")
+        }
+
         const res = await fetch("/api/auth/setup-profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -50,6 +55,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         if (!res.ok) {
           const body = await res.json()
+          // Check for duplicate profile error
+          if (body.alreadyExists) {
+            throw new Error("Bu email ilə artıq hesab mövcuddur. Zəhmət olmasa daxil olun.")
+          }
           throw new Error(body.error ?? "Profil qurulmadı")
         }
 
@@ -158,8 +167,15 @@ export function AuthForm({ mode }: AuthFormProps) {
               </div>
 
               {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {error}
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                  {mode === "signup" && error.includes("artıq hesab mövcuddur") && (
+                    <div className="mt-2">
+                      <Link href="/login" className="text-sm text-red-800 font-medium hover:underline">
+                        Daxil olun →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
