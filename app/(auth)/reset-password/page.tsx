@@ -23,14 +23,27 @@ export default function ResetPasswordPage() {
   const [validSession, setValidSession] = useState<boolean | null>(null)
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error || !session) {
-        setValidSession(false)
-      } else {
+    // Detect recovery session via onAuthStateChange PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
         setValidSession(true)
+      } else if (!session) {
+        setValidSession(false)
       }
     })
+
+    // Initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setValidSession(true)
+      } else {
+        setValidSession(false)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase.auth])
 
   async function handleSubmit(e: React.FormEvent) {
