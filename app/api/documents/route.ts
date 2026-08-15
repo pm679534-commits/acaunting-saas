@@ -7,6 +7,7 @@ import { randomUUID } from "crypto"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -87,16 +88,16 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(bytes)
 
   const admin = createAdminClient()
-  const { error: uploadError } = await admin.storage
-    .from("documents")
+  const { error: uploadError } = await (admin.storage
+    .from("documents") as any)
     .upload(storagePath, buffer, { contentType: file.type, upsert: false })
 
   if (uploadError) {
     return NextResponse.json({ error: `Storage xətası: ${uploadError.message}` }, { status: 500 })
   }
 
-  const { data: doc, error: dbError } = await admin
-    .from("documents")
+  const { data: doc, error: dbError } = await (admin
+    .from("documents") as any)
     .insert({
       organization_id: profile.organization_id,
       uploaded_by: user.id,
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     .single()
 
   if (dbError) {
-    await admin.storage.from("documents").remove([storagePath])
+    await (admin.storage.from("documents") as any).remove([storagePath])
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 

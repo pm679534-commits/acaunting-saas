@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 export async function POST(request: Request) {
   try {
     const { fullName, orgName, userId } = await request.json()
@@ -12,8 +14,8 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
 
     // Create organization
-    const { data: org, error: orgError } = await admin
-      .from("organizations")
+    const { data: org, error: orgError } = await (admin
+      .from("organizations") as any)
       .insert({ name: orgName })
       .select("id")
       .single()
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
     if (orgError) throw orgError
 
     // Create profile
-    const { error: profileError } = await admin.from("profiles").upsert({
+    const { error: profileError } = await (admin.from("profiles") as any).upsert({
       id: userId,
       organization_id: org.id,
       full_name: fullName,
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     if (profileError) throw profileError
 
     // Create starter subscription
-    const { error: subError } = await admin.from("subscriptions").insert({
+    const { error: subError } = await (admin.from("subscriptions") as any).insert({
       organization_id: org.id,
       plan_id: "starter",
       status: "trialing",

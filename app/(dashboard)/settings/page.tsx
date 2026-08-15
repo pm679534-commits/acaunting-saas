@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server"
 import { PageHeader } from "@/components/layout/page-header"
 import { BillingSection } from "@/components/settings/billing-section"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

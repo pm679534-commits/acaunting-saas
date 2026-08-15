@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_PATHS = ["/dashboard", "/upload", "/documents", "/settings"];
+const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -48,6 +49,11 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Allow reset-password and forgot-password pages regardless of auth state
+  if (pathname === "/reset-password" || pathname === "/forgot-password") {
+    return supabaseResponse;
   }
 
   return supabaseResponse;

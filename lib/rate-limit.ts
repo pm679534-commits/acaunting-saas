@@ -9,8 +9,8 @@ export async function checkRateLimit(
   const admin = createAdminClient();
   const now = new Date();
 
-  const { data, error } = await admin
-    .from("rate_limit_windows")
+  const { data, error } = await (admin
+    .from("rate_limit_windows") as any)
     .select("count, window_start")
     .eq("key", key)
     .single();
@@ -26,7 +26,7 @@ export async function checkRateLimit(
     now.getTime() - windowStart.getTime() > WINDOW_SECONDS * 1000;
 
   if (windowExpired) {
-    await admin.from("rate_limit_windows").upsert({
+    await (admin.from("rate_limit_windows") as any).upsert({
       key,
       count: 1,
       window_start: now.toISOString(),
@@ -39,8 +39,8 @@ export async function checkRateLimit(
     return { allowed: false, remaining: 0 };
   }
 
-  await admin
-    .from("rate_limit_windows")
+  await (admin
+    .from("rate_limit_windows") as any)
     .update({ count: currentCount + 1 })
     .eq("key", key);
 

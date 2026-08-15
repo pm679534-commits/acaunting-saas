@@ -6,6 +6,7 @@ import { generateExcel } from "@/lib/excel/export"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
+export const dynamic = "force-dynamic"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -34,8 +35,8 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
 
-  let query = admin
-    .from("documents")
+  let query = (admin
+    .from("documents") as any)
     .select("id, original_filename, raw_extraction, edited_fields, created_at")
     .eq("organization_id", profile.organization_id)
     .eq("status", "done")

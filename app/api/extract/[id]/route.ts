@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
+export const dynamic = "force-dynamic"
 
 export async function POST(
   _request: Request,
@@ -40,8 +41,8 @@ export async function POST(
 
   const admin = createAdminClient()
 
-  const { data: doc } = await admin
-    .from("documents")
+  const { data: doc } = await (admin
+    .from("documents") as any)
     .select("id, organization_id, storage_path, file_type, status")
     .eq("id", id)
     .single()
@@ -55,15 +56,15 @@ export async function POST(
   }
 
   // Mark as processing
-  await admin
-    .from("documents")
+  await (admin
+    .from("documents") as any)
     .update({ status: "processing", updated_at: new Date().toISOString() })
     .eq("id", id)
 
   try {
     // Get signed URL and download file
-    const { data: signedData, error: signError } = await admin.storage
-      .from("documents")
+    const { data: signedData, error: signError } = await (admin.storage
+      .from("documents") as any)
       .createSignedUrl(doc.storage_path, 120)
 
     if (signError || !signedData?.signedUrl) {
@@ -80,8 +81,8 @@ export async function POST(
     const extraction = await provider.extractFromDocument(fileBuffer, doc.file_type)
 
     // Save extraction result
-    await admin
-      .from("documents")
+    await (admin
+      .from("documents") as any)
       .update({
         status: "done",
         raw_extraction: extraction,
@@ -92,8 +93,8 @@ export async function POST(
       .eq("id", id)
 
     // Log usage
-    const { data: subscription } = await admin
-      .from("subscriptions")
+    const { data: subscription } = await (admin
+      .from("subscriptions") as any)
       .select("current_period_start")
       .eq("organization_id", profile.organization_id)
       .eq("status", "active")
@@ -101,7 +102,7 @@ export async function POST(
       .limit(1)
       .single()
 
-    await admin.from("usage_logs").insert({
+    await (admin.from("usage_logs") as any).insert({
       organization_id: profile.organization_id,
       document_id: id,
       billing_period_start: subscription?.current_period_start ?? new Date().toISOString(),
@@ -110,8 +111,8 @@ export async function POST(
     return NextResponse.json({ success: true, extraction })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Bilinməyən xəta"
-    await admin
-      .from("documents")
+    await (admin
+      .from("documents") as any)
       .update({
         status: "error",
         extraction_error: message,

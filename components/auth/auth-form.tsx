@@ -170,23 +170,32 @@ export function AuthForm({ mode }: AuthFormProps) {
                 {mode === "login" ? "Daxil ol" : "Hesab yarat"}
               </Button>
 
-              <p className="text-sm text-center text-slate-500">
-                {mode === "login" ? (
-                  <>
-                    Hesabınız yoxdur?{" "}
-                    <Link href="/signup" className="text-primary font-medium hover:underline">
-                      Qeydiyyat
+              <div className="flex flex-col gap-2 text-sm text-center text-slate-500">
+                <p>
+                  {mode === "login" ? (
+                    <>
+                      Hesabınız yoxdur?{" "}
+                      <Link href="/signup" className="text-primary font-medium hover:underline">
+                        Qeydiyyat
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      Hesabınız var?{" "}
+                      <Link href="/login" className="text-primary font-medium hover:underline">
+                        Daxil olun
+                      </Link>
+                    </>
+                  )}
+                </p>
+                {mode === "login" && (
+                  <p>
+                    <Link href="/forgot-password" className="text-primary font-medium hover:underline">
+                      Şifrəni unutdunuz?
                     </Link>
-                  </>
-                ) : (
-                  <>
-                    Hesabınız var?{" "}
-                    <Link href="/login" className="text-primary font-medium hover:underline">
-                      Daxil olun
-                    </Link>
-                  </>
+                  </p>
                 )}
-              </p>
+              </div>
             </CardFooter>
           </form>
         </Card>

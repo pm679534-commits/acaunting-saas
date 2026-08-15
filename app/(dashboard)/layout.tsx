@@ -4,6 +4,9 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { TopNav } from "@/components/layout/top-nav"
 import { Toaster } from "@/components/ui/toaster"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function DashboardLayout({
   children,
 }: {

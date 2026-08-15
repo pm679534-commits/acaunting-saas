@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { patchDocumentSchema } from "@/lib/validation/schemas"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -53,8 +55,8 @@ export async function PATCH(
   }
 
   const admin = createAdminClient()
-  const { data: existing } = await admin
-    .from("documents")
+  const { data: existing } = await (admin
+    .from("documents") as any)
     .select("id, organization_id, finalized_at")
     .eq("id", id)
     .single()
@@ -72,8 +74,8 @@ export async function PATCH(
     updatePayload.finalized_at = new Date().toISOString()
   }
 
-  const { error: updateError } = await admin
-    .from("documents")
+  const { error: updateError } = await (admin
+    .from("documents") as any)
     .update(updatePayload)
     .eq("id", id)
 
@@ -100,8 +102,8 @@ export async function DELETE(
   if (!profile?.organization_id) return NextResponse.json({ error: "Profil tapılmadı" }, { status: 404 })
 
   const admin = createAdminClient()
-  const { data: doc } = await admin
-    .from("documents")
+  const { data: doc } = await (admin
+    .from("documents") as any)
     .select("id, organization_id, storage_path")
     .eq("id", id)
     .single()
@@ -110,8 +112,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Sənəd tapılmadı" }, { status: 404 })
   }
 
-  await admin.storage.from("documents").remove([doc.storage_path])
-  await admin.from("documents").delete().eq("id", id)
+  await (admin.storage.from("documents") as any).remove([doc.storage_path])
+  await (admin.from("documents") as any).delete().eq("id", id)
 
   return NextResponse.json({ success: true })
 }
