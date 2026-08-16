@@ -38,7 +38,16 @@ export default async function DashboardPage({
     .eq("id", user.id)
     .single()
 
-  if (!profile?.organization_id) redirect("/login")
+  if (!profile?.organization_id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-semibold text-slate-900">Profil tapılmadı</h1>
+          <p className="text-slate-600">Zəhmət olmasa dəstək ilə əlaqə saxlayın.</p>
+        </div>
+      </div>
+    )
+  }
 
   let query = supabase
     .from("documents")
