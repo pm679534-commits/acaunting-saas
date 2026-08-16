@@ -32,7 +32,7 @@ export default async function DashboardPage({
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("organization_id")
     .eq("id", user.id)
@@ -44,6 +44,9 @@ export default async function DashboardPage({
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-semibold text-slate-900">Profil tapılmadı</h1>
           <p className="text-slate-600">Zəhmət olmasa dəstək ilə əlaqə saxlayın.</p>
+          {profileError && (
+            <p className="text-xs text-red-600 mt-2">{profileError.message}</p>
+          )}
         </div>
       </div>
     )
