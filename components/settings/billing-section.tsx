@@ -1,14 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Loader2, Building2, Mail, CreditCard, Calendar } from "lucide-react"
+import { Check, Loader2, Building2, Mail, CreditCard, Calendar, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/lib/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
+import { ALLOWED_MODELS } from "@/lib/ai/models"
 
 interface Plan {
   id: string
@@ -26,6 +34,8 @@ interface BillingSectionProps {
   allPlans: Plan[]
   orgName: string
   userEmail: string
+  preferredModel: string
+  userRole: string
 }
 
 export function BillingSection({
@@ -36,9 +46,15 @@ export function BillingSection({
   allPlans,
   orgName,
   userEmail,
+  preferredModel,
+  userRole,
 }: BillingSectionProps) {
   const { toast } = useToast()
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+  const [selectedModel, setSelectedModel] = useState(preferredModel)
+  const [updatingModel, setUpdatingModel] = useState(false)
+
+  const canEditSettings = userRole === "owner" || userRole === "admin"
 
   const planId = currentPlan?.id as string | undefined
   const planLimit = (currentPlan?.document_limit as number) ?? 100
@@ -66,6 +82,43 @@ export function BillingSection({
     }
   }
 
+  async function handleModelChange(newModel: string) {
+    if (!canEditSettings) {
+      toast({
+        title: "İcazə yoxdur",
+        description: "Bu parametri dəyişmək üçün icazəniz yoxdur",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setUpdatingModel(true)
+    try {
+      const res = await fetch("/api/settings/model", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: newModel }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? "Model yenilənmədi")
+      }
+      setSelectedModel(newModel)
+      toast({
+        title: "Uğurlu",
+        description: "Model seçimi yeniləndi",
+      })
+    } catch (err) {
+      toast({
+        title: "Xəta",
+        description: err instanceof Error ? err.message : "Xəta baş verdi",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingModel(false)
+    }
+  }
+
   return (
     <div className="space-y-8 max-w-4xl">
       {/* Account info */}
@@ -87,6 +140,46 @@ export function BillingSection({
             <div>
               <p className="text-xs text-slate-500">E-poçt</p>
               <p className="text-sm font-medium text-slate-900">{userEmail}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Model selector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Sənəd emalı modeli</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-4 h-4 text-slate-400 mt-1" />
+            <div className="flex-1 space-y-3">
+              <div>
+                <p className="text-xs text-slate-500 mb-2">
+                  Sənədlərin avtomatik emalı üçün istifadə olunan model
+                </p>
+                <Select
+                  value={selectedModel}
+                  onValueChange={handleModelChange}
+                  disabled={!canEditSettings || updatingModel}
+                >
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ALLOWED_MODELS).map(([id, label]) => (
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!canEditSettings && (
+                <p className="text-xs text-amber-600">
+                  Yalnız sahiblər və administratorlar bu parametri dəyişə bilər
+                </p>
+              )}
             </div>
           </div>
         </CardContent>

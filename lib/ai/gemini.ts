@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import type { AIProvider, ExtractionResult } from "./provider";
+import { validateModel, type AllowedModelId } from "./models";
 
 const EXTRACTION_PROMPT = `You are a document data extraction assistant for Azerbaijani accounting firms.
 Analyze the provided invoice or receipt image/PDF and extract the following fields.
@@ -97,7 +98,8 @@ export class GeminiProvider implements AIProvider {
 
   async extractFromDocument(
     fileBuffer: Buffer,
-    mimeType: string
+    mimeType: string,
+    modelId?: string
   ): Promise<ExtractionResult> {
     const filePart: Part = {
       inlineData: {
@@ -106,9 +108,23 @@ export class GeminiProvider implements AIProvider {
       },
     };
 
+    let modelsToTry: string[];
+
+    if (modelId) {
+      // Validate and use the specified model, with fallback chain
+      const validatedModel = validateModel(modelId);
+      modelsToTry = [
+        validatedModel,
+        ...this.modelFallbackChain.filter((m) => m !== validatedModel),
+      ];
+    } else {
+      // Use default fallback chain
+      modelsToTry = this.modelFallbackChain;
+    }
+
     let lastError: Error | null = null;
 
-    for (const modelName of this.modelFallbackChain) {
+    for (const modelName of modelsToTry) {
       try {
         const result = await this.tryExtractWithModel(modelName, filePart);
         console.log(`Gemini extraction succeeded with model: ${modelName}`);

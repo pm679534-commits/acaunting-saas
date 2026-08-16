@@ -19,13 +19,16 @@ export async function POST(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id")
+    .select("organization_id, organizations(preferred_model)")
     .eq("id", user.id)
     .single()
 
   if (!profile?.organization_id) {
     return NextResponse.json({ error: "Profil tapılmadı" }, { status: 404 })
   }
+
+  const orgData = profile.organizations as unknown as { preferred_model: string } | null
+  const preferredModel = orgData?.preferred_model ?? "gemini-2.5-flash-latest"
 
   // Rate limit: 20 extractions per minute per org
   const { allowed } = await checkRateLimit(
@@ -76,9 +79,9 @@ export async function POST(
     const arrayBuffer = await fileRes.arrayBuffer()
     const fileBuffer = Buffer.from(arrayBuffer)
 
-    // Extract with AI
+    // Extract with AI using organization's preferred model
     const provider = getAIProvider()
-    const extraction = await provider.extractFromDocument(fileBuffer, doc.file_type)
+    const extraction = await provider.extractFromDocument(fileBuffer, doc.file_type, preferredModel)
 
     // Save extraction result
     await (admin

@@ -11,6 +11,7 @@ export interface ExtractionResult {
 export interface AIProvider {
   extractFromDocument(
     fileBuffer: Buffer,
-    mimeType: string
+    mimeType: string,
+    modelId?: string
   ): Promise<ExtractionResult>;
 }

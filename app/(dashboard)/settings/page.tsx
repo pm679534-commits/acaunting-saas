@@ -13,7 +13,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id, full_name, organizations(name)")
+    .select("organization_id, full_name, role, organizations(name, preferred_model)")
     .eq("id", user.id)
     .single()
 
@@ -43,7 +43,10 @@ export default async function SettingsPage() {
     .eq("organization_id", profile.organization_id)
     .gte("billing_period_start", subscription?.current_period_start ?? new Date(0).toISOString())
 
-  const orgName = (profile?.organizations as unknown as { name: string } | null)?.name ?? ""
+  const orgData = profile?.organizations as unknown as { name: string; preferred_model: string } | null
+  const orgName = orgData?.name ?? ""
+  const preferredModel = orgData?.preferred_model ?? "gemini-2.5-flash-latest"
+  const userRole = profile?.role ?? "member"
 
   return (
     <div>
@@ -56,6 +59,8 @@ export default async function SettingsPage() {
         allPlans={plans ?? []}
         orgName={orgName}
         userEmail={user.email ?? ""}
+        preferredModel={preferredModel}
+        userRole={userRole}
       />
     </div>
   )
