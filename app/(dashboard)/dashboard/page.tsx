@@ -68,20 +68,16 @@ export default async function DashboardPage({
 
   const { data: documents, count } = await query
 
-  // Fetch subscription and usage in parallel
-  const [subscriptionResult, usageResult] = await Promise.all([
+  // Fetch subscription and usage in parallel — include trialing so new users see their plan
+  const [subscriptionResult] = await Promise.all([
     supabase
       .from("subscriptions")
       .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit, name)")
       .eq("organization_id", profile.organization_id)
-      .eq("status", "active")
+      .in("status", ["active", "trialing"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("usage_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", profile.organization_id)
   ])
 
   const subscription = subscriptionResult.data

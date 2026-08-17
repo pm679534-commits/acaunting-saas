@@ -203,9 +203,11 @@ export function BillingSection({
               <p className="text-sm font-medium text-slate-900">
                 {(currentPlan?.name as string) ?? "Başlanğıc"}
                 {" · "}
-                {(currentPlan?.price_azn as number) === 0
+                {currentPlan == null
+                  ? "—"
+                  : (currentPlan.price_azn as number) === 0
                   ? "Fərdi qiymət"
-                  : `${currentPlan?.price_azn} ₼/ay`}
+                  : `${currentPlan.price_azn as number} ₼/ay`}
               </p>
             </div>
           </div>
