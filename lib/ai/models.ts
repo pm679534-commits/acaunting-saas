@@ -4,6 +4,8 @@ export const ALLOWED_MODELS = {
   "gemini-2.5-flash-latest": "Sürətli",
   "gemini-2.5-pro": "Dəqiq (Pro)",
   "gemini-2.5-flash": "Standart",
+  "gemini-1.5-flash": "Klassik Sürətli",
+  "gemini-1.5-pro": "Klassik Dəqiq",
 } as const;
 
 export type AllowedModelId = keyof typeof ALLOWED_MODELS;
