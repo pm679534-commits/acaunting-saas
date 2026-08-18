@@ -104,6 +104,8 @@ export async function POST(
         currency: item.currency || extraction.currency,
         date: item.date || extraction.date,
         category: item.category,
+        quantity: item.quantity ?? 1,
+        unit: item.unit || "ədəd",
       }))
 
       await (admin.from("document_line_items") as any).insert(lineItemsToInsert)

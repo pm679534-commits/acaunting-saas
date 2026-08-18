@@ -33,6 +33,8 @@ interface Document {
     currency: string | null
     date: string | null
     category: string | null
+    quantity: number | null
+    unit: string | null
   }>
 }
 

@@ -34,7 +34,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
 
   const { data: doc } = await supabase
     .from("documents")
-    .select("*, document_line_items(line_number, description, amount, currency, date, category)")
+    .select("*, document_line_items(line_number, description, amount, currency, date, category, quantity, unit)")
     .eq("id", id)
     .eq("organization_id", profile.organization_id)
     .single()

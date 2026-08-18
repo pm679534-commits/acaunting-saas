@@ -11,6 +11,8 @@ interface DocumentRow {
     currency: string | null;
     date: string | null;
     category: string | null;
+    quantity: number | null;
+    unit: string | null;
   }>;
 }
 
@@ -37,7 +39,18 @@ function escapeXml(str: string | number | null | undefined): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+    .replace(/'/g, "&apos;")
+    // Remove any control characters that could break XML
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+}
+
+// Validate and sanitize quantity to ensure it's a safe numeric value
+function sanitizeQuantity(qty: number | null | undefined): number {
+  if (qty === null || qty === undefined || isNaN(qty) || !isFinite(qty)) {
+    return 1;
+  }
+  // Clamp to reasonable range to prevent abuse
+  return Math.max(0.001, Math.min(1000000, qty));
 }
 
 export function generate1CXml(documents: DocumentRow[]): string {
@@ -61,6 +74,9 @@ export function generate1CXml(documents: DocumentRow[]): string {
         const itemCurrency = lineItem.currency || fields.currency;
         const itemDate = lineItem.date || fields.date || timestamp.split("T")[0];
         const itemCategory = lineItem.category || fields.category || "Товар/Услуга";
+        const itemQuantity = sanitizeQuantity(lineItem.quantity);
+        const itemUnit = lineItem.unit || "ədəd";
+        const pricePerUnit = itemQuantity > 0 ? itemAmount / itemQuantity : itemAmount;
 
         xml += '    <Документ>\n';
         xml += '      <Ид>' + escapeXml(docId) + '</Ид>\n';
@@ -76,9 +92,9 @@ export function generate1CXml(documents: DocumentRow[]): string {
         xml += '      <Контрагенты>\n';
         xml += '        <Контрагент>\n';
         xml += '          <Ид>' + escapeXml(fields.tax_id || "UNKNOWN") + '</Ид>\n';
-        xml += '          <Наименование>' + escapeXml(fields.vendor_name || lineItem.description || "Не указано") + '</Наименование>\n';
+        xml += '          <Наименование>' + escapeXml(fields.vendor_name || "Не указано") + '</Наименование>\n';  // Use document vendor, not line item description
         xml += '          <Роль>Продавец</Роль>\n';
-        xml += '          <ПолноеНаименование>' + escapeXml(fields.vendor_name || lineItem.description || "Не указано") + '</ПолноеНаименование>\n';
+        xml += '          <ПолноеНаименование>' + escapeXml(fields.vendor_name || "Не указано") + '</ПолноеНаименование>\n';
         if (fields.tax_id) {
           xml += '          <ИНН>' + escapeXml(fields.tax_id) + '</ИНН>\n';
         }
@@ -88,9 +104,10 @@ export function generate1CXml(documents: DocumentRow[]): string {
         xml += '      <Товары>\n';
         xml += '        <Товар>\n';
         xml += '          <Ид>ITEM-' + escapeXml(docId) + '</Ид>\n';
-        xml += '          <Наименование>' + escapeXml(lineItem.description || itemCategory) + '</Наименование>\n';
-        xml += '          <Количество>1</Количество>\n';
-        xml += '          <ЦенаЗаЕдиницу>' + escapeXml(itemAmount.toFixed(2)) + '</ЦенаЗаЕдиницу>\n';
+        xml += '          <Наименование>' + escapeXml(lineItem.description || itemCategory) + '</Наименование>\n';  // Line item description as product name
+        xml += '          <БазовыеЕдиницы Код="' + escapeXml(itemUnit) + '">' + escapeXml(itemUnit) + '</БазовыеЕдиницы>\n';
+        xml += '          <Количество>' + escapeXml(itemQuantity.toFixed(3)) + '</Количество>\n';  // Actual quantity from line item
+        xml += '          <ЦенаЗаЕдиницу>' + escapeXml(pricePerUnit.toFixed(2)) + '</ЦенаЗаЕдиницу>\n';
         xml += '          <Сумма>' + escapeXml(itemAmount.toFixed(2)) + '</Сумма>\n';
         xml += '        </Товар>\n';
         xml += '      </Товары>\n';

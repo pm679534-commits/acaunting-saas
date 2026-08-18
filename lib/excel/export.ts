@@ -13,6 +13,8 @@ interface DocumentRow {
     currency: string | null;
     date: string | null;
     category: string | null;
+    quantity: number | null;
+    unit: string | null;
   }>;
 }
 
@@ -31,6 +33,19 @@ function getFields(doc: DocumentRow) {
   };
 }
 
+// Sanitize Excel cell values to prevent formula injection
+function sanitizeExcelValue(value: string | number | null | undefined): string | number {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "number") return value;
+
+  const str = String(value);
+  // If the string starts with dangerous characters, prefix with single quote
+  if (str.length > 0 && /^[=+\-@]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
 export async function generateExcel(documents: DocumentRow[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "HesabSənəd";
@@ -45,6 +60,9 @@ export async function generateExcel(documents: DocumentRow[]): Promise<Buffer> {
     { header: "Tarix", key: "date", width: 14 },
     { header: "Satıcı", key: "vendor_name", width: 30 },
     { header: "VÖEN", key: "tax_id", width: 14 },
+    { header: "Məhsul/Xidmət adı", key: "product_name", width: 35 },
+    { header: "Miqdar", key: "quantity", width: 10 },
+    { header: "Ölçü vahidi", key: "unit", width: 12 },
     { header: "Kateqoriya", key: "category", width: 20 },
     { header: "Məbləğ", key: "amount", width: 14 },
     { header: "Valyuta", key: "currency", width: 10 },
@@ -79,14 +97,17 @@ export async function generateExcel(documents: DocumentRow[]): Promise<Buffer> {
         rowIndex++;
         const row = sheet.addRow({
           index: rowIndex,
-          date: lineItem.date || fields.date,
-          vendor_name: lineItem.description || fields.vendor_name,
-          tax_id: fields.tax_id,
-          category: lineItem.category || fields.category,
+          date: sanitizeExcelValue(lineItem.date || fields.date),
+          vendor_name: sanitizeExcelValue(fields.vendor_name),  // Use document-level vendor, NOT line item description
+          tax_id: sanitizeExcelValue(fields.tax_id),
+          product_name: sanitizeExcelValue(lineItem.description),  // Line item description goes here
+          quantity: typeof lineItem.quantity === "number" ? lineItem.quantity : 1,
+          unit: sanitizeExcelValue(lineItem.unit || "ədəd"),
+          category: sanitizeExcelValue(lineItem.category || fields.category),
           amount: lineItem.amount,
-          currency: lineItem.currency || fields.currency,
-          original_filename: doc.original_filename,
-          created_at: new Date(doc.created_at).toLocaleDateString("az-AZ"),
+          currency: sanitizeExcelValue(lineItem.currency || fields.currency),
+          original_filename: sanitizeExcelValue(doc.original_filename),
+          created_at: sanitizeExcelValue(new Date(doc.created_at).toLocaleDateString("az-AZ")),
         });
 
         row.height = 18;
@@ -107,20 +128,27 @@ export async function generateExcel(documents: DocumentRow[]): Promise<Buffer> {
         if (typeof lineItem.amount === "number") {
           amountCell.numFmt = "#,##0.00";
         }
+
+        // Quantity column — number format
+        const quantityCell = row.getCell("quantity");
+        quantityCell.numFmt = "#,##0.##";
       });
     } else {
-      // Single-item document: export summary row
+      // Single-item document: export summary row (no product name/quantity/unit)
       rowIndex++;
       const row = sheet.addRow({
         index: rowIndex,
-        date: fields.date,
-        vendor_name: fields.vendor_name,
-        tax_id: fields.tax_id,
-        category: fields.category,
+        date: sanitizeExcelValue(fields.date),
+        vendor_name: sanitizeExcelValue(fields.vendor_name),
+        tax_id: sanitizeExcelValue(fields.tax_id),
+        product_name: "",  // Empty for single-item docs
+        quantity: "",
+        unit: "",
+        category: sanitizeExcelValue(fields.category),
         amount: fields.amount,
-        currency: fields.currency,
-        original_filename: doc.original_filename,
-        created_at: new Date(doc.created_at).toLocaleDateString("az-AZ"),
+        currency: sanitizeExcelValue(fields.currency),
+        original_filename: sanitizeExcelValue(doc.original_filename),
+        created_at: sanitizeExcelValue(new Date(doc.created_at).toLocaleDateString("az-AZ")),
       });
 
       row.height = 18;

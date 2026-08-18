@@ -31,11 +31,13 @@ For MULTI-ROW TABULAR documents (payroll sheets, itemized statements), use this 
   "confidence": number between 0 and 1,
   "line_items": [
     {
-      "description": "line item description (e.g. job title, item name)",
+      "description": "line item description (e.g. job title, item name, product)",
       "amount": number or null (amount for this line),
       "currency": "currency for this line if different from document currency, or null",
       "date": "date for this line if different from document date, or null",
-      "category": "category for this line or null"
+      "category": "category for this line or null",
+      "quantity": number or null (quantity/count, default 1 if not present),
+      "unit": "unit of measurement (e.g. ədəd, kg, litr, saat) or null"
     }
   ]
 }
@@ -80,6 +82,8 @@ function parseExtractionJson(text: string): ExtractionResult {
       currency: typeof item.currency === "string" ? item.currency : null,
       date: typeof item.date === "string" ? item.date : null,
       category: typeof item.category === "string" ? item.category : null,
+      quantity: typeof item.quantity === "number" ? item.quantity : null,
+      unit: typeof item.unit === "string" ? item.unit : null,
     }));
   }
 
