@@ -92,6 +92,7 @@ export default async function DashboardPage({
     : 0
 
   const plan = subscription?.subscription_plans as unknown as { document_limit: number; name: string } | null
+  const limitExceeded = (usageCount ?? 0) >= (plan?.document_limit ?? 5)
 
   return (
     <div>
@@ -99,7 +100,7 @@ export default async function DashboardPage({
         title="İdarə paneli"
         description="Yüklənmiş sənədlərinizin siyahısı"
       >
-        <Button asChild>
+        <Button asChild disabled={limitExceeded}>
           <Link href="/upload">
             <Upload className="w-4 h-4" />
             Sənəd yüklə

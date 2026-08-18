@@ -63,41 +63,7 @@ export async function POST(request: Request) {
 
   if (!profile?.organization_id) return NextResponse.json({ error: "Profil tapılmadı" }, { status: 404 })
 
-  // Check document limit before processing upload
-  const admin = createAdminClient()
-
-  // Get organization's subscription and plan limit
-  const { data: subscription } = await (admin
-    .from("subscriptions") as any)
-    .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit)")
-    .eq("organization_id", profile.organization_id)
-    .in("status", ["active", "trialing"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const planData = subscription?.subscription_plans as unknown as { document_limit: number } | null
-  const documentLimit = planData?.document_limit ?? 5
-
-  // Count documents in current billing period (not usage_logs which are created AFTER extraction)
-  const periodStart = subscription?.current_period_start ?? new Date(0).toISOString()
-
-  const { count: currentUsage } = await (admin
-    .from("documents") as any)
-    .select("*", { count: "exact", head: true })
-    .eq("organization_id", profile.organization_id)
-    .gte("created_at", periodStart)
-
-  console.error(`[UPLOAD LIMIT CHECK] org=${profile.organization_id} currentUsage=${currentUsage} limit=${documentLimit} periodStart=${periodStart} hasSubscription=${!!subscription}`)
-
-  if (currentUsage !== null && currentUsage >= documentLimit) {
-    console.error(`[UPLOAD BLOCKED] org=${profile.organization_id} usage ${currentUsage} >= limit ${documentLimit}`)
-    return NextResponse.json(
-      { error: `Aylıq sənəd limitinə çatmısınız (${documentLimit}). Planı yüksəldin və ya növbəti dövrü gözləyin.` },
-      { status: 403 }
-    )
-  }
-
+  // Parse and validate file BEFORE any database operations
   let formData: FormData
   try {
     formData = await request.formData()
@@ -142,42 +108,74 @@ export async function POST(request: Request) {
   const sanitized = sanitizeFilename(file.name)
   const storagePath = `${profile.organization_id}/${randomUUID()}-${sanitized}`
 
+  const admin = createAdminClient()
+
+  // ATOMIC OPERATION: Check limit and create DB row in a single transaction with row-level locking
+  // This prevents race conditions where multiple concurrent uploads bypass the limit check
+  const { data: result, error: rpcError } = await (admin.rpc as any)(
+    'check_and_insert_document',
+    {
+      p_organization_id: profile.organization_id,
+      p_uploaded_by: user.id,
+      p_storage_path: storagePath,
+      p_original_filename: file.name.slice(0, 255),
+      p_file_type: file.type,
+      p_file_size_bytes: file.size,
+    }
+  )
+
+  if (rpcError) {
+    console.error(`[RPC ERROR] org=${profile.organization_id} - ${rpcError.message}`)
+    return NextResponse.json({ error: rpcError.message }, { status: 500 })
+  }
+
+  const insertResult = result?.[0]
+  if (!insertResult) {
+    console.error(`[RPC NO RESULT] org=${profile.organization_id}`)
+    return NextResponse.json({ error: "Sistemdə xəta baş verdi" }, { status: 500 })
+  }
+
+  // Check if limit was exceeded
+  if (insertResult.limit_exceeded) {
+    console.error(
+      `[LIMIT EXCEEDED] org=${profile.organization_id} usage=${insertResult.current_usage} limit=${insertResult.monthly_limit}`
+    )
+    return NextResponse.json(
+      {
+        error: "LIMIT_EXCEEDED",
+        message: `Aylıq sənəd limitiniz bitmişdir (${insertResult.current_usage}/${insertResult.monthly_limit}). Xahiş olunur planınızı yüksəldin.`,
+      },
+      { status: 403 }
+    )
+  }
+
+  const docId = insertResult.doc_id
+  if (!docId) {
+    console.error(`[NO DOC ID] org=${profile.organization_id}`)
+    return NextResponse.json({ error: "Sənəd yaradılmadı" }, { status: 500 })
+  }
+
+  console.log(
+    `[UPLOAD OK] org=${profile.organization_id} doc=${docId} usage=${insertResult.current_usage}/${insertResult.monthly_limit}`
+  )
+
+  // Upload file to storage AFTER successful DB insertion
+  // If this fails, the DB row remains in 'pending' status — no orphan blobs
   const { error: uploadError } = await (admin.storage
     .from("documents") as any)
     .upload(storagePath, buffer, { contentType: file.type, upsert: false })
 
   if (uploadError) {
-    return NextResponse.json({ error: `Storage xətası: ${uploadError.message}` }, { status: 500 })
+    // Storage upload failed — mark document as error and clean up
+    await (admin.from("documents") as any)
+      .update({ status: "error", extraction_error: `Storage xətası: ${uploadError.message}` })
+      .eq("id", docId)
+
+    return NextResponse.json(
+      { error: `Storage xətası: ${uploadError.message}` },
+      { status: 500 }
+    )
   }
 
-  const { data: doc, error: dbError } = await (admin
-    .from("documents") as any)
-    .insert({
-      organization_id: profile.organization_id,
-      uploaded_by: user.id,
-      storage_path: storagePath,
-      original_filename: file.name.slice(0, 255),
-      file_type: file.type,
-      file_size_bytes: file.size,
-      status: "pending",
-    })
-    .select("id")
-    .single()
-
-  if (dbError) {
-    await (admin.storage.from("documents") as any).remove([storagePath])
-
-    // Check if error is from document limit trigger
-    if (dbError.message && dbError.message.includes("DOCUMENT_LIMIT_EXCEEDED")) {
-      console.error(`[DB TRIGGER BLOCKED] org=${profile.organization_id} - ${dbError.message}`)
-      return NextResponse.json(
-        { error: `Aylıq sənəd limitinə çatmısınız. Planı yüksəldin və ya növbəti dövrü gözləyin.` },
-        { status: 403 }
-      )
-    }
-
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ id: doc.id }, { status: 201 })
+  return NextResponse.json({ id: docId }, { status: 201 })
 }
