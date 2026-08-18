@@ -79,14 +79,14 @@ export async function POST(request: Request) {
   const planData = subscription?.subscription_plans as unknown as { document_limit: number } | null
   const documentLimit = planData?.document_limit ?? 5
 
-  // Count usage logs in current billing period (matching dashboard logic)
+  // Count documents in current billing period (not usage_logs which are created AFTER extraction)
   const periodStart = subscription?.current_period_start ?? new Date(0).toISOString()
 
   const { count: currentUsage } = await (admin
-    .from("usage_logs") as any)
+    .from("documents") as any)
     .select("*", { count: "exact", head: true })
     .eq("organization_id", profile.organization_id)
-    .gte("billing_period_start", periodStart)
+    .gte("created_at", periodStart)
 
   console.error(`[UPLOAD LIMIT CHECK] org=${profile.organization_id} currentUsage=${currentUsage} limit=${documentLimit} periodStart=${periodStart} hasSubscription=${!!subscription}`)
 
@@ -166,6 +166,16 @@ export async function POST(request: Request) {
 
   if (dbError) {
     await (admin.storage.from("documents") as any).remove([storagePath])
+
+    // Check if error is from document limit trigger
+    if (dbError.message && dbError.message.includes("DOCUMENT_LIMIT_EXCEEDED")) {
+      console.error(`[DB TRIGGER BLOCKED] org=${profile.organization_id} - ${dbError.message}`)
+      return NextResponse.json(
+        { error: `Aylıq sənəd limitinə çatmısınız. Planı yüksəldin və ya növbəti dövrü gözləyin.` },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 
