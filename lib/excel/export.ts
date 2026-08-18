@@ -6,6 +6,14 @@ interface DocumentRow {
   raw_extraction: Record<string, unknown> | null;
   edited_fields: Record<string, unknown> | null;
   created_at: string;
+  document_line_items?: Array<{
+    line_number: number;
+    description: string | null;
+    amount: number | null;
+    currency: string | null;
+    date: string | null;
+    category: string | null;
+  }>;
 }
 
 function getFields(doc: DocumentRow) {
@@ -60,37 +68,79 @@ export async function generateExcel(documents: DocumentRow[]): Promise<Buffer> {
     };
   });
 
-  documents.forEach((doc, i) => {
+  let rowIndex = 0;
+
+  documents.forEach((doc) => {
     const fields = getFields(doc);
-    const row = sheet.addRow({
-      index: i + 1,
-      date: fields.date,
-      vendor_name: fields.vendor_name,
-      tax_id: fields.tax_id,
-      category: fields.category,
-      amount: fields.amount,
-      currency: fields.currency,
-      original_filename: doc.original_filename,
-      created_at: new Date(doc.created_at).toLocaleDateString("az-AZ"),
-    });
 
-    row.height = 18;
+    // If document has line items, export each line item as a separate row
+    if (doc.document_line_items && doc.document_line_items.length > 0) {
+      doc.document_line_items.forEach((lineItem) => {
+        rowIndex++;
+        const row = sheet.addRow({
+          index: rowIndex,
+          date: lineItem.date || fields.date,
+          vendor_name: lineItem.description || fields.vendor_name,
+          tax_id: fields.tax_id,
+          category: lineItem.category || fields.category,
+          amount: lineItem.amount,
+          currency: lineItem.currency || fields.currency,
+          original_filename: doc.original_filename,
+          created_at: new Date(doc.created_at).toLocaleDateString("az-AZ"),
+        });
 
-    // Alternate row shading
-    if (i % 2 === 1) {
-      row.eachCell((cell) => {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFF8F9FF" },
-        };
+        row.height = 18;
+
+        // Alternate row shading
+        if (rowIndex % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFF8F9FF" },
+            };
+          });
+        }
+
+        // Amount column — number format
+        const amountCell = row.getCell("amount");
+        if (typeof lineItem.amount === "number") {
+          amountCell.numFmt = "#,##0.00";
+        }
       });
-    }
+    } else {
+      // Single-item document: export summary row
+      rowIndex++;
+      const row = sheet.addRow({
+        index: rowIndex,
+        date: fields.date,
+        vendor_name: fields.vendor_name,
+        tax_id: fields.tax_id,
+        category: fields.category,
+        amount: fields.amount,
+        currency: fields.currency,
+        original_filename: doc.original_filename,
+        created_at: new Date(doc.created_at).toLocaleDateString("az-AZ"),
+      });
 
-    // Amount column — number format
-    const amountCell = row.getCell("amount");
-    if (typeof fields.amount === "number") {
-      amountCell.numFmt = "#,##0.00";
+      row.height = 18;
+
+      // Alternate row shading
+      if (rowIndex % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FF" },
+          };
+        });
+      }
+
+      // Amount column — number format
+      const amountCell = row.getCell("amount");
+      if (typeof fields.amount === "number") {
+        amountCell.numFmt = "#,##0.00";
+      }
     }
   });
 

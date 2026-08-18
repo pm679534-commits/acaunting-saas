@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   let query = (admin
     .from("documents") as any)
-    .select("id, original_filename, raw_extraction, edited_fields, created_at")
+    .select("id, original_filename, raw_extraction, edited_fields, created_at, document_line_items(line_number, description, amount, currency, date, category)")
     .eq("organization_id", profile.organization_id)
     .eq("status", "done")
     .order("created_at", { ascending: false })

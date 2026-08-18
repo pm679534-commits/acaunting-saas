@@ -95,6 +95,21 @@ export async function POST(
       })
       .eq("id", id)
 
+    // If extraction contains line items, save them to the line_items table
+    if (extraction.line_items && extraction.line_items.length > 0) {
+      const lineItemsToInsert = extraction.line_items.map((item, index) => ({
+        document_id: id,
+        line_number: index + 1,
+        description: item.description,
+        amount: item.amount,
+        currency: item.currency || extraction.currency,
+        date: item.date || extraction.date,
+        category: item.category,
+      }))
+
+      await (admin.from("document_line_items") as any).insert(lineItemsToInsert)
+    }
+
     // Log usage
     const { data: subscription } = await (admin
       .from("subscriptions") as any)

@@ -4,6 +4,14 @@ interface DocumentRow {
   raw_extraction: Record<string, unknown> | null;
   edited_fields: Record<string, unknown> | null;
   created_at: string;
+  document_line_items?: Array<{
+    line_number: number;
+    description: string | null;
+    amount: number | null;
+    currency: string | null;
+    date: string | null;
+    category: string | null;
+  }>;
 }
 
 function getFields(doc: DocumentRow) {
@@ -39,44 +47,96 @@ export function generate1CXml(documents: DocumentRow[]): string {
   xml += '<КоммерческаяИнформация ВерсияСхемы="2.10" ДатаФормирования="' + escapeXml(timestamp) + '">\n';
   xml += '  <Документы>\n';
 
-  documents.forEach((doc, index) => {
+  let docCounter = 0;
+
+  documents.forEach((doc) => {
     const fields = getFields(doc);
-    const docId = `DOC-${String(index + 1).padStart(6, "0")}`;
 
-    xml += '    <Документ>\n';
-    xml += '      <Ид>' + escapeXml(docId) + '</Ид>\n';
-    xml += '      <Номер>' + escapeXml(String(index + 1)) + '</Номер>\n';
-    xml += '      <Дата>' + escapeXml(fields.date || timestamp.split("T")[0]) + '</Дата>\n';
-    xml += '      <ХозОперация>Поступление товаров и услуг</ХозОперация>\n';
-    xml += '      <Роль>Продавец</Роль>\n';
-    xml += '      <Валюта>' + escapeXml(fields.currency) + '</Валюта>\n';
-    xml += '      <Курс>1</Курс>\n';
-    xml += '      <Сумма>' + escapeXml(fields.amount.toFixed(2)) + '</Сумма>\n';
-    xml += '      <Комментарий>' + escapeXml(doc.original_filename) + '</Комментарий>\n';
+    // If document has line items, generate one XML document per line item
+    if (doc.document_line_items && doc.document_line_items.length > 0) {
+      doc.document_line_items.forEach((lineItem) => {
+        docCounter++;
+        const docId = `DOC-${String(docCounter).padStart(6, "0")}`;
+        const itemAmount = lineItem.amount ?? 0;
+        const itemCurrency = lineItem.currency || fields.currency;
+        const itemDate = lineItem.date || fields.date || timestamp.split("T")[0];
+        const itemCategory = lineItem.category || fields.category || "Товар/Услуга";
 
-    xml += '      <Контрагенты>\n';
-    xml += '        <Контрагент>\n';
-    xml += '          <Ид>' + escapeXml(fields.tax_id || "UNKNOWN") + '</Ид>\n';
-    xml += '          <Наименование>' + escapeXml(fields.vendor_name || "Не указано") + '</Наименование>\n';
-    xml += '          <Роль>Продавец</Роль>\n';
-    xml += '          <ПолноеНаименование>' + escapeXml(fields.vendor_name || "Не указано") + '</ПолноеНаименование>\n';
-    if (fields.tax_id) {
-      xml += '          <ИНН>' + escapeXml(fields.tax_id) + '</ИНН>\n';
+        xml += '    <Документ>\n';
+        xml += '      <Ид>' + escapeXml(docId) + '</Ид>\n';
+        xml += '      <Номер>' + escapeXml(String(docCounter)) + '</Номер>\n';
+        xml += '      <Дата>' + escapeXml(itemDate) + '</Дата>\n';
+        xml += '      <ХозОперация>Поступление товаров и услуг</ХозОперация>\n';
+        xml += '      <Роль>Продавец</Роль>\n';
+        xml += '      <Валюта>' + escapeXml(itemCurrency) + '</Валюта>\n';
+        xml += '      <Курс>1</Курс>\n';
+        xml += '      <Сумма>' + escapeXml(itemAmount.toFixed(2)) + '</Сумма>\n';
+        xml += '      <Комментарий>' + escapeXml(doc.original_filename + " - " + (lineItem.description || "")) + '</Комментарий>\n';
+
+        xml += '      <Контрагенты>\n';
+        xml += '        <Контрагент>\n';
+        xml += '          <Ид>' + escapeXml(fields.tax_id || "UNKNOWN") + '</Ид>\n';
+        xml += '          <Наименование>' + escapeXml(fields.vendor_name || lineItem.description || "Не указано") + '</Наименование>\n';
+        xml += '          <Роль>Продавец</Роль>\n';
+        xml += '          <ПолноеНаименование>' + escapeXml(fields.vendor_name || lineItem.description || "Не указано") + '</ПолноеНаименование>\n';
+        if (fields.tax_id) {
+          xml += '          <ИНН>' + escapeXml(fields.tax_id) + '</ИНН>\n';
+        }
+        xml += '        </Контрагент>\n';
+        xml += '      </Контрагенты>\n';
+
+        xml += '      <Товары>\n';
+        xml += '        <Товар>\n';
+        xml += '          <Ид>ITEM-' + escapeXml(docId) + '</Ид>\n';
+        xml += '          <Наименование>' + escapeXml(lineItem.description || itemCategory) + '</Наименование>\n';
+        xml += '          <Количество>1</Количество>\n';
+        xml += '          <ЦенаЗаЕдиницу>' + escapeXml(itemAmount.toFixed(2)) + '</ЦенаЗаЕдиницу>\n';
+        xml += '          <Сумма>' + escapeXml(itemAmount.toFixed(2)) + '</Сумма>\n';
+        xml += '        </Товар>\n';
+        xml += '      </Товары>\n';
+
+        xml += '    </Документ>\n';
+      });
+    } else {
+      // Single-item document: generate one XML document
+      docCounter++;
+      const docId = `DOC-${String(docCounter).padStart(6, "0")}`;
+
+      xml += '    <Документ>\n';
+      xml += '      <Ид>' + escapeXml(docId) + '</Ид>\n';
+      xml += '      <Номер>' + escapeXml(String(docCounter)) + '</Номер>\n';
+      xml += '      <Дата>' + escapeXml(fields.date || timestamp.split("T")[0]) + '</Дата>\n';
+      xml += '      <ХозОперация>Поступление товаров и услуг</ХозОперация>\n';
+      xml += '      <Роль>Продавец</Роль>\n';
+      xml += '      <Валюта>' + escapeXml(fields.currency) + '</Валюта>\n';
+      xml += '      <Курс>1</Курс>\n';
+      xml += '      <Сумма>' + escapeXml(fields.amount.toFixed(2)) + '</Сумма>\n';
+      xml += '      <Комментарий>' + escapeXml(doc.original_filename) + '</Комментарий>\n';
+
+      xml += '      <Контрагенты>\n';
+      xml += '        <Контрагент>\n';
+      xml += '          <Ид>' + escapeXml(fields.tax_id || "UNKNOWN") + '</Ид>\n';
+      xml += '          <Наименование>' + escapeXml(fields.vendor_name || "Не указано") + '</Наименование>\n';
+      xml += '          <Роль>Продавец</Роль>\n';
+      xml += '          <ПолноеНаименование>' + escapeXml(fields.vendor_name || "Не указано") + '</ПолноеНаименование>\n';
+      if (fields.tax_id) {
+        xml += '          <ИНН>' + escapeXml(fields.tax_id) + '</ИНН>\n';
+      }
+      xml += '        </Контрагент>\n';
+      xml += '      </Контрагенты>\n';
+
+      xml += '      <Товары>\n';
+      xml += '        <Товар>\n';
+      xml += '          <Ид>ITEM-' + escapeXml(docId) + '</Ид>\n';
+      xml += '          <Наименование>' + escapeXml(fields.category || "Товар/Услуга") + '</Наименование>\n';
+      xml += '          <Количество>1</Количество>\n';
+      xml += '          <ЦенаЗаЕдиницу>' + escapeXml(fields.amount.toFixed(2)) + '</ЦенаЗаЕдиницу>\n';
+      xml += '          <Сумма>' + escapeXml(fields.amount.toFixed(2)) + '</Сумма>\n';
+      xml += '        </Товар>\n';
+      xml += '      </Товары>\n';
+
+      xml += '    </Документ>\n';
     }
-    xml += '        </Контрагент>\n';
-    xml += '      </Контрагенты>\n';
-
-    xml += '      <Товары>\n';
-    xml += '        <Товар>\n';
-    xml += '          <Ид>ITEM-' + escapeXml(docId) + '</Ид>\n';
-    xml += '          <Наименование>' + escapeXml(fields.category || "Товар/Услуга") + '</Наименование>\n';
-    xml += '          <Количество>1</Количество>\n';
-    xml += '          <ЦенаЗаЕдиницу>' + escapeXml(fields.amount.toFixed(2)) + '</ЦенаЗаЕдиницу>\n';
-    xml += '          <Сумма>' + escapeXml(fields.amount.toFixed(2)) + '</Сумма>\n';
-    xml += '        </Товар>\n';
-    xml += '      </Товары>\n';
-
-    xml += '    </Документ>\n';
   });
 
   xml += '  </Документы>\n';

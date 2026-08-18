@@ -1,12 +1,17 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
-import type { AIProvider, ExtractionResult } from "./provider";
+import type { AIProvider, ExtractionResult, LineItem } from "./provider";
 import { validateModel, type AllowedModelId } from "./models";
 
 const EXTRACTION_PROMPT = `You are a document data extraction assistant for Azerbaijani accounting firms.
-Analyze the provided invoice or receipt image/PDF and extract the following fields.
+Analyze the provided invoice, receipt, or tabular document (payroll sheet, itemized statement, etc.) and extract data.
+
+IMPORTANT: Detect the document type automatically:
+- If it's a SINGLE-ITEM document (invoice, receipt): extract one summary record with the schema below.
+- If it's a MULTI-ROW TABULAR document (payroll sheet with multiple employees, itemized statement with multiple line items): extract each row as a separate line item using the "line_items" array.
+
 Return ONLY a valid JSON object with no markdown, no code blocks, no extra text.
 
-Required JSON schema:
+For SINGLE-ITEM documents (invoices, receipts), use this schema:
 {
   "date": "YYYY-MM-DD string or null if not found",
   "amount": number or null (total amount as a number, no currency symbols),
@@ -15,7 +20,31 @@ Required JSON schema:
   "tax_id": "VÖEN (taxpayer ID) 10-digit string or null",
   "category": "one of: Mal/Xidmət, Yanacaq, Nəqliyyat, Kommunal, Əmək haqqı, Digər or null",
   "confidence": number between 0 and 1 representing overall extraction confidence
-}`;
+}
+
+For MULTI-ROW TABULAR documents (payroll sheets, itemized statements), use this schema:
+{
+  "date": "document date or null",
+  "vendor_name": "company/entity name if present or null",
+  "tax_id": "VÖEN if present or null",
+  "currency": "AZN|USD|EUR|TRY|RUB or null (common currency for all items)",
+  "confidence": number between 0 and 1,
+  "line_items": [
+    {
+      "description": "line item description (e.g. job title, item name)",
+      "amount": number or null (amount for this line),
+      "currency": "currency for this line if different from document currency, or null",
+      "date": "date for this line if different from document date, or null",
+      "category": "category for this line or null"
+    }
+  ]
+}
+
+Detection guidelines:
+- If the document has a visible table structure with multiple rows of similar data (e.g. employee list, product list), use line_items.
+- If it's a single transaction (one invoice, one receipt), use the summary schema (no line_items).
+- Payroll sheets ("Əmək haqqı cədvəli", "stat cədvəli") with multiple employees → use line_items.
+- Single invoice/receipt → summary schema only.`;
 
 const STRICT_EXTRACTION_PROMPT = `${EXTRACTION_PROMPT}
 
@@ -29,7 +58,7 @@ function parseExtractionJson(text: string): ExtractionResult {
 
   const parsed = JSON.parse(cleaned);
 
-  return {
+  const result: ExtractionResult = {
     date: typeof parsed.date === "string" ? parsed.date : null,
     amount: typeof parsed.amount === "number" ? parsed.amount : null,
     currency: typeof parsed.currency === "string" ? parsed.currency : null,
@@ -42,6 +71,19 @@ function parseExtractionJson(text: string): ExtractionResult {
         ? Math.min(1, Math.max(0, parsed.confidence))
         : 0.5,
   };
+
+  // If line_items array exists, parse and add it
+  if (Array.isArray(parsed.line_items) && parsed.line_items.length > 0) {
+    result.line_items = parsed.line_items.map((item: any): LineItem => ({
+      description: typeof item.description === "string" ? item.description : null,
+      amount: typeof item.amount === "number" ? item.amount : null,
+      currency: typeof item.currency === "string" ? item.currency : null,
+      date: typeof item.date === "string" ? item.date : null,
+      category: typeof item.category === "string" ? item.category : null,
+    }));
+  }
+
+  return result;
 }
 
 export class GeminiProvider implements AIProvider {
