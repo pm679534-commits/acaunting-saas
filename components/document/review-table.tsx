@@ -16,6 +16,14 @@ interface Document {
   edited_fields: Record<string, unknown> | null
   finalized_at: string | null
   extraction_error: string | null
+  document_line_items?: Array<{
+    line_number: number
+    description: string | null
+    amount: number | null
+    currency: string | null
+    date: string | null
+    category: string | null
+  }>
 }
 
 const CATEGORIES = [
@@ -154,10 +162,17 @@ export function ReviewTable({ document: doc }: { document: Document }) {
   const [saved, setSaved] = useState(false)
 
   const base = doc.raw_extraction ?? {}
+
+  // If document has line items, compute the total amount and use it as the display value
+  let computedAmount: number | null = base.amount as number | null
+  if (doc.document_line_items && doc.document_line_items.length > 0) {
+    computedAmount = doc.document_line_items.reduce((sum, item) => sum + (item.amount ?? 0), 0)
+  }
+
   const [fields, setFields] = useState<Record<string, unknown>>(
     doc.edited_fields && Object.keys(doc.edited_fields).length > 0
-      ? { ...base, ...doc.edited_fields }
-      : { ...base }
+      ? { ...base, ...doc.edited_fields, amount: computedAmount }
+      : { ...base, amount: computedAmount }
   )
 
   function onEdit(key: string, value: unknown) {
@@ -208,6 +223,18 @@ export function ReviewTable({ document: doc }: { document: Document }) {
 
   return (
     <div className="space-y-6">
+      {doc.document_line_items && doc.document_line_items.length > 0 && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-blue-800">Çoxsətirli sənəd</p>
+            <p className="text-sm text-blue-600 mt-1">
+              Bu sənəd {doc.document_line_items.length} ayrı-ayrı məlumat sətri ehtiva edir.
+              Göstərilən məbləğ bütün sətirlər üzrə cəmdir.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-semibold text-slate-900">Çıxarılmış məlumatlar</h2>
@@ -227,7 +254,7 @@ export function ReviewTable({ document: doc }: { document: Document }) {
             <FieldRow label="Tarix" fieldKey="date" value={base.date as string ?? null} editedValue={fields.date as string ?? null} onEdit={onEdit} confidence={confidence} type="date" />
             <FieldRow label="Satıcı adı" fieldKey="vendor_name" value={base.vendor_name as string ?? null} editedValue={fields.vendor_name as string ?? null} onEdit={onEdit} confidence={confidence} />
             <FieldRow label="VÖEN" fieldKey="tax_id" value={base.tax_id as string ?? null} editedValue={fields.tax_id as string ?? null} onEdit={onEdit} confidence={confidence} />
-            <FieldRow label="Məbləğ" fieldKey="amount" value={base.amount as number ?? null} editedValue={fields.amount as number ?? null} onEdit={onEdit} confidence={confidence} type="number" />
+            <FieldRow label="Məbləğ" fieldKey="amount" value={computedAmount} editedValue={fields.amount as number ?? null} onEdit={onEdit} confidence={confidence} type="number" />
             <FieldRow label="Valyuta" fieldKey="currency" value={base.currency as string ?? null} editedValue={fields.currency as string ?? null} onEdit={onEdit} confidence={confidence} type="select-currency" />
             <FieldRow label="Kateqoriya" fieldKey="category" value={base.category as string ?? null} editedValue={fields.category as string ?? null} onEdit={onEdit} confidence={confidence} type="select-category" />
             </tbody>
