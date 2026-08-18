@@ -79,16 +79,19 @@ export async function POST(request: Request) {
   const planData = subscription?.subscription_plans as unknown as { document_limit: number } | null
   const documentLimit = planData?.document_limit ?? 5
 
-  // Count documents uploaded in current billing period
+  // Count usage logs in current billing period (matching dashboard logic)
   const periodStart = subscription?.current_period_start ?? new Date(0).toISOString()
 
   const { count: currentUsage } = await (admin
-    .from("documents") as any)
+    .from("usage_logs") as any)
     .select("*", { count: "exact", head: true })
     .eq("organization_id", profile.organization_id)
-    .gte("created_at", periodStart)
+    .gte("billing_period_start", periodStart)
+
+  console.error(`[UPLOAD LIMIT CHECK] org=${profile.organization_id} currentUsage=${currentUsage} limit=${documentLimit} periodStart=${periodStart} hasSubscription=${!!subscription}`)
 
   if (currentUsage !== null && currentUsage >= documentLimit) {
+    console.error(`[UPLOAD BLOCKED] org=${profile.organization_id} usage ${currentUsage} >= limit ${documentLimit}`)
     return NextResponse.json(
       { error: `Aylıq sənəd limitinə çatmısınız (${documentLimit}). Planı yüksəldin və ya növbəti dövrü gözləyin.` },
       { status: 403 }
