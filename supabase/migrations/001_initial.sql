@@ -60,7 +60,7 @@ create table subscription_plans (
 
 -- no RLS needed — plans are public reference data
 insert into subscription_plans (id, name, price_azn, document_limit, features) values
-  ('starter',    'Başlanğıc',  29,  100,  '["Aylıq 100 sənəd","Excel export","E-poçt dəstəyi"]'),
+  ('starter',    'Başlanğıc',  29,  5,  '["Aylıq 5 sənəd","Excel export","E-poçt dəstəyi"]'),
   ('pro',        'Professional', 79, 500, '["Aylıq 500 sənəd","Excel export","Prioritet dəstək","API çıxışı"]'),
   ('enterprise', 'Korporativ', 0,   9999, '["Limitsiz sənədlər","Excel export","Xüsusi inteqrasiya","SLA"]');
 

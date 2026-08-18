@@ -73,19 +73,39 @@ export async function POST(request: Request) {
   const file = formData.get("file") as File | null
   if (!file) return NextResponse.json({ error: "Fayl tələb olunur" }, { status: 400 })
 
+  // Validate MIME type from the file object
   if (!ALLOWED_FILE_TYPES.includes(file.type as typeof ALLOWED_FILE_TYPES[number])) {
     return NextResponse.json({ error: "Yalnız JPG, PNG, WebP, PDF faylları qəbul olunur" }, { status: 400 })
   }
 
+  // Server-side size validation
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json({ error: "Fayl ölçüsü 10 MB-dan çox ola bilməz" }, { status: 400 })
+    return NextResponse.json({ error: "Fayl ölçüsü 50 MB-dan çox ola bilməz" }, { status: 400 })
   }
 
-  const sanitized = sanitizeFilename(file.name)
-  const storagePath = `${profile.organization_id}/${randomUUID()}-${sanitized}`
-
+  // Read file bytes for content validation
   const bytes = await file.arrayBuffer()
   const buffer = Buffer.from(bytes)
+
+  // Basic magic number validation for common file types
+  const magicNumbers = buffer.slice(0, 8)
+  const isValidContent =
+    // JPEG: FF D8 FF
+    (magicNumbers[0] === 0xFF && magicNumbers[1] === 0xD8 && magicNumbers[2] === 0xFF) ||
+    // PNG: 89 50 4E 47
+    (magicNumbers[0] === 0x89 && magicNumbers[1] === 0x50 && magicNumbers[2] === 0x4E && magicNumbers[3] === 0x47) ||
+    // WebP: RIFF...WEBP
+    (magicNumbers[0] === 0x52 && magicNumbers[1] === 0x49 && magicNumbers[2] === 0x46 && magicNumbers[3] === 0x46) ||
+    // PDF: %PDF
+    (magicNumbers[0] === 0x25 && magicNumbers[1] === 0x50 && magicNumbers[2] === 0x44 && magicNumbers[3] === 0x46)
+
+  if (!isValidContent) {
+    return NextResponse.json({ error: "Fayl məzmunu etibarsızdır" }, { status: 400 })
+  }
+
+  // Sanitize filename and create random UUID-prefixed path to prevent collisions and path traversal
+  const sanitized = sanitizeFilename(file.name)
+  const storagePath = `${profile.organization_id}/${randomUUID()}-${sanitized}`
 
   const admin = createAdminClient()
   const { error: uploadError } = await (admin.storage

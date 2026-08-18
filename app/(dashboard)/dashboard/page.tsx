@@ -109,7 +109,7 @@ export default async function DashboardPage({
 
       <UsageMeter
         used={usageCount ?? 0}
-        limit={plan?.document_limit ?? 100}
+        limit={plan?.document_limit ?? 5}
         planName={plan?.name ?? "Başlanğıc"}
       />
 

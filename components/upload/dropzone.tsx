@@ -23,7 +23,7 @@ export function Dropzone() {
       return "Yalnız JPG, PNG, WebP və PDF faylları qəbul olunur"
     }
     if (f.size > MAX_FILE_SIZE_BYTES) {
-      return `Fayl ölçüsü 10 MB-dan çox olmamalıdır (${formatFileSize(f.size)})`
+      return `Fayl ölçüsü 50 MB-dan çox olmamalıdır (${formatFileSize(f.size)})`
     }
     return null
   }
@@ -139,7 +139,7 @@ export function Dropzone() {
           <p className="text-base font-medium text-slate-900 mb-1">
             Faylı bura sürükleyin və ya seçin
           </p>
-          <p className="text-sm text-slate-500">JPG, PNG, WebP, PDF · Maks. 10 MB</p>
+          <p className="text-sm text-slate-500">JPG, PNG, WebP, PDF · Maks. 50 MB</p>
           {error && (
             <div className="mt-4 flex items-center gap-2 text-sm text-red-600">
               <AlertCircle className="w-4 h-4" />

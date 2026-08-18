@@ -57,7 +57,7 @@ export function BillingSection({
   const canEditSettings = userRole === "owner" || userRole === "admin"
 
   const planId = currentPlan?.id as string | undefined
-  const planLimit = (currentPlan?.document_limit as number) ?? 100
+  const planLimit = (currentPlan?.document_limit as number) ?? 5
   const usagePct = Math.min(100, Math.round((usageCount / planLimit) * 100))
 
   async function handleUpgrade(targetPlanId: string) {
