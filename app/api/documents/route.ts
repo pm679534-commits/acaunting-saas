@@ -63,6 +63,38 @@ export async function POST(request: Request) {
 
   if (!profile?.organization_id) return NextResponse.json({ error: "Profil tapılmadı" }, { status: 404 })
 
+  // Check document limit before processing upload
+  const admin = createAdminClient()
+
+  // Get organization's subscription and plan limit
+  const { data: subscription } = await (admin
+    .from("subscriptions") as any)
+    .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit)")
+    .eq("organization_id", profile.organization_id)
+    .in("status", ["active", "trialing"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const planData = subscription?.subscription_plans as unknown as { document_limit: number } | null
+  const documentLimit = planData?.document_limit ?? 5
+
+  // Count documents uploaded in current billing period
+  const periodStart = subscription?.current_period_start ?? new Date(0).toISOString()
+
+  const { count: currentUsage } = await (admin
+    .from("documents") as any)
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", profile.organization_id)
+    .gte("created_at", periodStart)
+
+  if (currentUsage !== null && currentUsage >= documentLimit) {
+    return NextResponse.json(
+      { error: `Aylıq sənəd limitinə çatmısınız (${documentLimit}). Planı yüksəldin və ya növbəti dövrü gözləyin.` },
+      { status: 403 }
+    )
+  }
+
   let formData: FormData
   try {
     formData = await request.formData()
@@ -107,7 +139,6 @@ export async function POST(request: Request) {
   const sanitized = sanitizeFilename(file.name)
   const storagePath = `${profile.organization_id}/${randomUUID()}-${sanitized}`
 
-  const admin = createAdminClient()
   const { error: uploadError } = await (admin.storage
     .from("documents") as any)
     .upload(storagePath, buffer, { contentType: file.type, upsert: false })
