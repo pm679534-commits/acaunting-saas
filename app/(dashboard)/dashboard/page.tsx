@@ -54,7 +54,7 @@ export default async function DashboardPage({
 
   let query = supabase
     .from("documents")
-    .select("*", { count: "exact" })
+    .select("*, document_line_items(line_number, description, amount, currency, date, category)", { count: "exact" })
     .eq("organization_id", profile.organization_id)
     .order("created_at", { ascending: false })
     .range(from, to)

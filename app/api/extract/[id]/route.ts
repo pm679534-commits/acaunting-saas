@@ -44,25 +44,21 @@ export async function POST(
 
   const admin = createAdminClient()
 
-  const { data: doc } = await (admin
-    .from("documents") as any)
-    .select("id, organization_id, storage_path, file_type, status")
-    .eq("id", id)
-    .single()
-
-  if (!doc || doc.organization_id !== profile.organization_id) {
-    return NextResponse.json({ error: "Sənəd tapılmadı" }, { status: 404 })
-  }
-
-  if (doc.status === "processing") {
-    return NextResponse.json({ error: "Artıq emal olunur" }, { status: 409 })
-  }
-
-  // Mark as processing
-  await (admin
+  // Atomic check-and-set to prevent race condition: only update if status is NOT already processing
+  const { data: updateResult } = await (admin
     .from("documents") as any)
     .update({ status: "processing", updated_at: new Date().toISOString() })
     .eq("id", id)
+    .eq("organization_id", profile.organization_id)
+    .neq("status", "processing")  // Only proceed if NOT already processing
+    .select("id, storage_path, file_type, status")
+    .single()
+
+  if (!updateResult) {
+    return NextResponse.json({ error: "Sənəd artıq emal olunur və ya tapılmadı" }, { status: 409 })
+  }
+
+  const doc = updateResult
 
   try {
     // Get signed URL and download file
@@ -97,6 +93,9 @@ export async function POST(
 
     // If extraction contains line items, save them to the line_items table
     if (extraction.line_items && extraction.line_items.length > 0) {
+      // First, delete any existing line items for this document (in case of retry/reprocessing)
+      await (admin.from("document_line_items") as any).delete().eq("document_id", id)
+
       const lineItemsToInsert = extraction.line_items.map((item, index) => ({
         document_id: id,
         line_number: index + 1,

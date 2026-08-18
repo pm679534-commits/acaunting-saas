@@ -26,6 +26,14 @@ interface Document {
   edited_fields: Record<string, unknown> | null
   created_at: string
   file_size_bytes: number
+  document_line_items?: Array<{
+    line_number: number
+    description: string | null
+    amount: number | null
+    currency: string | null
+    date: string | null
+    category: string | null
+  }>
 }
 
 interface DocumentTableProps {
@@ -61,6 +69,8 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [exporting, setExporting]       = useState(false)
   const [exporting1C, setExporting1C]   = useState(false)
+  const [exportingLineItems, setExportingLineItems] = useState(false)
+  const [exporting1CLineItems, setExporting1CLineItems] = useState(false)
   const [deleting, setDeleting]         = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null)
 
@@ -147,6 +157,33 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
     }
   }
 
+  async function handleExportLineItems(format: "excel" | "1c" = "excel") {
+    const isExcel = format === "excel"
+    isExcel ? setExportingLineItems(true) : setExporting1CLineItems(true)
+    try {
+      const endpoint = isExcel ? "/api/export-line-items" : "/api/export-1c-line-items"
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentIds: selectedIds.size > 0 ? Array.from(selectedIds) : undefined }),
+      })
+      if (!res.ok) throw new Error("Export xətası")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      const extension = isExcel ? "xlsx" : "xml"
+      const prefix    = isExcel ? "line-items" : "1c-line-items"
+      a.download = `${prefix}-${new Date().toISOString().split("T")[0]}.${extension}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      isExcel ? setExportingLineItems(false) : setExporting1CLineItems(false)
+    }
+  }
+
   if (documents.length === 0) {
     return (
       <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center py-16 gap-3">
@@ -199,7 +236,7 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
               variant="outline"
               size="sm"
               onClick={() => handleExport("excel")}
-              disabled={exporting || exporting1C}
+              disabled={exporting || exporting1C || exportingLineItems || exporting1CLineItems}
             >
               {exporting ? <Loader2 className="animate-spin" /> : null}
               Excel ({selectedIds.size > 0 ? selectedIds.size : "hamısı"})
@@ -208,10 +245,28 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
               variant="outline"
               size="sm"
               onClick={() => handleExport("1c")}
-              disabled={exporting || exporting1C}
+              disabled={exporting || exporting1C || exportingLineItems || exporting1CLineItems}
             >
               {exporting1C ? <Loader2 className="animate-spin" /> : null}
               1C XML ({selectedIds.size > 0 ? selectedIds.size : "hamısı"})
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportLineItems("excel")}
+              disabled={exporting || exporting1C || exportingLineItems || exporting1CLineItems}
+            >
+              {exportingLineItems ? <Loader2 className="animate-spin" /> : null}
+              Excel (Line Items)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportLineItems("1c")}
+              disabled={exporting || exporting1C || exportingLineItems || exporting1CLineItems}
+            >
+              {exporting1CLineItems ? <Loader2 className="animate-spin" /> : null}
+              1C XML (Line Items)
             </Button>
             {selectedIds.size > 0 && (
               <Button
@@ -254,6 +309,18 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
                 const fields = (doc.edited_fields && Object.keys(doc.edited_fields).length > 0
                   ? doc.edited_fields
                   : doc.raw_extraction) ?? {}
+
+                // If document has line items, sum their amounts for display
+                let displayAmount: number | null = fields.amount as number | null
+                let displayCurrency: string | null = fields.currency as string | null
+
+                if (doc.document_line_items && doc.document_line_items.length > 0) {
+                  const total = doc.document_line_items.reduce((sum, item) => sum + (item.amount ?? 0), 0)
+                  displayAmount = total
+                  // Use first line item's currency or fallback to document currency
+                  displayCurrency = doc.document_line_items[0]?.currency || displayCurrency
+                }
+
                 return (
                   <tr key={doc.id} className="hover:bg-slate-50/70 transition-colors group">
                     <td className="pl-4 py-3.5">
@@ -279,7 +346,7 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
                       {(fields.vendor_name as string) ?? "—"}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600 font-mono text-xs">
-                      {formatAmount(fields.amount as number | null, fields.currency as string | null)}
+                      {formatAmount(displayAmount, displayCurrency)}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">
                       {formatDate(fields.date as string | null)}
