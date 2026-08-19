@@ -166,41 +166,42 @@ export async function POST(request: Request) {
       console.warn(`[RPC FALLBACK] org=${profile.organization_id} - Using direct queries`, rpcFallbackError)
 
       // FALLBACK: Direct queries with manual limit checking
-      const { data: subscriptionData } = await admin
+      // Use authenticated supabase client for reads (properly typed), admin only for writes
+      const { data: subscriptionData } = await supabase
         .from("subscriptions")
         .select("plan_id, current_period_start, status")
         .eq("organization_id", profile.organization_id)
         .in("status", ["active", "trialing"])
         .order("created_at", { ascending: false })
         .limit(1)
-        .maybeSingle() as { data: { plan_id: string; current_period_start: string; status: string } | null }
+        .maybeSingle()
 
       let planLimit = 5
       let periodStart = new Date(0).toISOString()
 
       if (subscriptionData?.plan_id) {
-        const { data: planData } = await admin
+        const { data: planData } = await supabase
           .from("subscription_plans")
           .select("document_limit")
           .eq("id", subscriptionData.plan_id)
-          .single() as { data: { document_limit: number } | null }
+          .single()
 
         if (planData) {
           planLimit = planData.document_limit
           periodStart = subscriptionData.current_period_start
         }
       } else {
-        const { data: starterPlan } = await admin
+        const { data: starterPlan } = await supabase
           .from("subscription_plans")
           .select("document_limit")
           .eq("id", "starter")
-          .single() as { data: { document_limit: number } | null }
+          .single()
 
         planLimit = starterPlan?.document_limit ?? 5
       }
 
       // Count existing documents in current period
-      const { count } = await admin
+      const { count } = await supabase
         .from("documents")
         .select("*", { count: "exact", head: true })
         .eq("organization_id", profile.organization_id)
@@ -220,8 +221,8 @@ export async function POST(request: Request) {
         )
       }
 
-      // Direct insert
-      const { data: insertedDoc, error: insertError } = await admin
+      // Direct insert using admin for bypass RLS
+      const { data: insertedDoc, error: insertError } = await (admin
         .from("documents")
         .insert({
           organization_id: profile.organization_id,
@@ -233,7 +234,7 @@ export async function POST(request: Request) {
           status: "pending",
         })
         .select("id")
-        .single() as { data: { id: string } | null; error: any }
+        .single() as any)
 
       if (insertError || !insertedDoc) {
         console.error(`[FALLBACK INSERT ERROR] org=${profile.organization_id}`, insertError)
