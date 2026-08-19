@@ -9,6 +9,32 @@ IMPORTANT: Detect the document type automatically:
 - If it's a SINGLE-ITEM document (invoice, receipt): extract one summary record with the schema below.
 - If it's a MULTI-ROW TABULAR document (payroll sheet with multiple employees, itemized statement with multiple line items): extract each row as a separate line item using the "line_items" array.
 
+AZERBAIJANI DATE PARSING RULES:
+- Convert Azerbaijani month names strictly to ISO YYYY-MM-DD format:
+  * Yanvar → 01, Fevral → 02, Mart → 03, Aprel → 04, May → 05, İyun → 06
+  * İyul → 07, Avqust → 08, Sentyabr → 09, Oktyabr → 10, Noyabr → 11, Dekabr → 12
+- Date Hierarchy: The PRIMARY date (document_date) MUST be the main document creation date (e.g., the date shown under "HESAB-FAKTURA" heading).
+- DO NOT use contract reference dates (e.g., "01 Mart 2025-ci il tarixli müqavilə") as the main document date.
+- For documents with multiple dates, prioritize the invoice/document issue date over any contract/reference dates.
+
+AUTO-CATEGORIZATION LOGIC:
+Analyze line item descriptions and vendor name to infer the most appropriate category:
+- "Təmir və Texniki Xidmət" → radiator, silindr, tormoz, avto ehtiyat hissələri, təmir xidmətləri
+- "İT və Proqram Təminatı" → IT, proqram təminatı, server, kompüter avadanlığı, hosting
+- "Dəftərxana və Ofis Xərcləri" → ofis ləvazimatı, kağız, qələm, kartric
+- "Məsləhət və Konsaltinq Xidmətləri" → 1C, mühasibatlıq, konsaltinq, məsləhət
+- "Nəqliyyat və Logistika" → benzin, yanacaq, daşınma, kuryer, logistika
+- "Kommunal Xidmətlər" → elektrik, su, qaz, istilik
+- "Əmək haqqı" → əmək haqqı, maaş, əlavə
+- "Mal/Xidmət" → general goods or services that don't fit specific categories
+- "Ümumi Xidmətlər" → default for uncertain cases
+NEVER return "Tapılmadı" or leave category empty. Always provide the best matching category or use "Ümumi Xidmətlər" as fallback.
+
+NUMERICAL PRECISION:
+- Currency defaults to "AZN" unless explicit foreign symbol ($, €, ₺, ₽) is present.
+- Clean up spaces in amounts (e.g., "6 105,00" → 6105.00).
+- Parse comma as decimal separator for Azerbaijani format (e.g., "1.234,56" → 1234.56).
+
 Return ONLY a valid JSON object with no markdown, no code blocks, no extra text.
 
 For SINGLE-ITEM documents (invoices, receipts), use this schema:
@@ -18,7 +44,7 @@ For SINGLE-ITEM documents (invoices, receipts), use this schema:
   "currency": "AZN|USD|EUR|TRY|RUB or null",
   "vendor_name": "company/person name string or null",
   "tax_id": "VÖEN (taxpayer ID) 10-digit string or null",
-  "category": "one of: Mal/Xidmət, Yanacaq, Nəqliyyat, Kommunal, Əmək haqqı, Digər or null",
+  "category": "one of the categories listed above, never null or empty",
   "confidence": number between 0 and 1 representing overall extraction confidence
 }
 
@@ -35,7 +61,7 @@ For MULTI-ROW TABULAR documents (payroll sheets, itemized statements), use this 
       "amount": number or null (amount for this line),
       "currency": "currency for this line if different from document currency, or null",
       "date": "date for this line if different from document date, or null",
-      "category": "category for this line or null",
+      "category": "category for this line based on description, never null or empty",
       "quantity": number or null (quantity/count, default 1 if not present),
       "unit": "unit of measurement (e.g. ədəd, kg, litr, saat) or null"
     }
