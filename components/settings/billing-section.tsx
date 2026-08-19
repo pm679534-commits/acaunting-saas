@@ -58,7 +58,8 @@ export function BillingSection({
 
   const planId = currentPlan?.id as string | undefined
   const planLimit = (currentPlan?.document_limit as number) ?? 5
-  const usagePct = Math.min(100, Math.round((usageCount / planLimit) * 100))
+  const isUnlimited = planLimit >= 9999
+  const usagePct = isUnlimited ? 0 : Math.min(100, Math.round((usageCount / planLimit) * 100))
 
   async function handleUpgrade(targetPlanId: string) {
     setLoadingPlan(targetPlanId)
@@ -223,7 +224,9 @@ export function BillingSection({
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium text-slate-700">Bu ay istifadə</p>
-              <p className="text-sm font-semibold text-slate-900">{usageCount} / {planLimit} sənəd</p>
+              <p className="text-sm font-semibold text-slate-900">
+                {usageCount} / {isUnlimited ? "Limitsiz" : `${planLimit} sənəd`}
+              </p>
             </div>
             <Progress value={usagePct} className={usagePct >= 80 ? "[&>div]:bg-amber-500" : ""} />
           </div>

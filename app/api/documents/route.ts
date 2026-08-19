@@ -223,7 +223,7 @@ export async function POST(request: Request) {
 
       // Direct insert using admin for bypass RLS
       const { data: insertedDoc, error: insertError } = await (admin
-        .from("documents")
+        .from("documents") as any)
         .insert({
           organization_id: profile.organization_id,
           uploaded_by: user.id,
@@ -234,7 +234,7 @@ export async function POST(request: Request) {
           status: "pending",
         })
         .select("id")
-        .single() as any)
+        .single()
 
       if (insertError || !insertedDoc) {
         console.error(`[FALLBACK INSERT ERROR] org=${profile.organization_id}`, insertError)

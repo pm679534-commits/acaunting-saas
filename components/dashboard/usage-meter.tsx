@@ -9,9 +9,10 @@ interface UsageMeterProps {
 }
 
 export function UsageMeter({ used, limit, planName }: UsageMeterProps) {
-  const pct = Math.min(100, Math.round((used / limit) * 100))
-  const atLimit = used >= limit
-  const nearLimit = pct >= 80 && !atLimit
+  const isUnlimited = limit >= 9999
+  const pct = isUnlimited ? 0 : Math.min(100, Math.round((used / limit) * 100))
+  const atLimit = !isUnlimited && used >= limit
+  const nearLimit = !isUnlimited && pct >= 80 && !atLimit
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 flex items-center gap-4 sm:gap-6">
@@ -23,7 +24,7 @@ export function UsageMeter({ used, limit, planName }: UsageMeterProps) {
             <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{planName}</span>
           </div>
           <span className={`text-sm font-semibold whitespace-nowrap ${atLimit || nearLimit ? "text-amber-600" : "text-slate-900"}`}>
-            {used} / {limit} sənəd
+            {used} / {isUnlimited ? "Limitsiz" : `${limit} sənəd`}
           </span>
         </div>
         <Progress
