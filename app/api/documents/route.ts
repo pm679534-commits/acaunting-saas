@@ -173,7 +173,7 @@ export async function POST(request: Request) {
         .in("status", ["active", "trialing"])
         .order("created_at", { ascending: false })
         .limit(1)
-        .maybeSingle()
+        .maybeSingle() as { data: { plan_id: string; current_period_start: string; status: string } | null }
 
       let planLimit = 5
       let periodStart = new Date(0).toISOString()
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
           .from("subscription_plans")
           .select("document_limit")
           .eq("id", subscriptionData.plan_id)
-          .single()
+          .single() as { data: { document_limit: number } | null }
 
         if (planData) {
           planLimit = planData.document_limit
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
           .from("subscription_plans")
           .select("document_limit")
           .eq("id", "starter")
-          .single()
+          .single() as { data: { document_limit: number } | null }
 
         planLimit = starterPlan?.document_limit ?? 5
       }
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
           status: "pending",
         })
         .select("id")
-        .single()
+        .single() as { data: { id: string } | null; error: any }
 
       if (insertError || !insertedDoc) {
         console.error(`[FALLBACK INSERT ERROR] org=${profile.organization_id}`, insertError)
