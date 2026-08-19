@@ -33,7 +33,7 @@ export function UsageMeter({ used, limit, planName }: UsageMeterProps) {
         {atLimit && (
           <p className="mt-1.5 text-xs text-red-600">
             Aylıq limitə çatmısınız.{" "}
-            <Link href="/settings" className="underline font-medium">
+            <Link href="/settings" prefetch={true} className="underline font-medium">
               Planı yüksəldin
             </Link>
           </p>
@@ -41,7 +41,7 @@ export function UsageMeter({ used, limit, planName }: UsageMeterProps) {
         {nearLimit && (
           <p className="mt-1.5 text-xs text-amber-600">
             Limitə yaxınlaşırsız.{" "}
-            <Link href="/settings" className="underline font-medium">
+            <Link href="/settings" prefetch={true} className="underline font-medium">
               Planı yüksəldin
             </Link>
           </p>

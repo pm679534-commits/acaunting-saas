@@ -1,11 +1,12 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, X } from "lucide-react"
+import { Search, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useCallback, useState } from "react"
+import { useCallback, useState, useEffect } from "react"
+import { useDebounce } from "@/lib/hooks/use-debounce"
 
 const STATUSES = [
   { value: "pending", label: "Gözləyir" },
@@ -23,6 +24,8 @@ export function DocumentFilters({ currentStatus, currentSearch }: DocumentFilter
   const router = useRouter()
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(currentSearch ?? "")
+  const debouncedSearch = useDebounce(search, 250)
+  const [isSearching, setIsSearching] = useState(false)
 
   const updateParam = useCallback(
     (key: string, value: string | undefined) => {
@@ -38,10 +41,18 @@ export function DocumentFilters({ currentStatus, currentSearch }: DocumentFilter
     [router, searchParams]
   )
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    updateParam("search", search || undefined)
-  }
+  useEffect(() => {
+    if (debouncedSearch !== currentSearch) {
+      setIsSearching(false)
+      updateParam("search", debouncedSearch || undefined)
+    }
+  }, [debouncedSearch, currentSearch, updateParam])
+
+  useEffect(() => {
+    if (search !== debouncedSearch) {
+      setIsSearching(true)
+    }
+  }, [search, debouncedSearch])
 
   function clearAll() {
     setSearch("")
@@ -52,15 +63,18 @@ export function DocumentFilters({ currentStatus, currentSearch }: DocumentFilter
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
-      <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px] max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         <Input
           placeholder="Fayl adı və ya satıcı axtar…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          className="pl-9 pr-9"
         />
-      </form>
+        {isSearching && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin pointer-events-none" />
+        )}
+      </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         {STATUSES.map(({ value, label }) => (

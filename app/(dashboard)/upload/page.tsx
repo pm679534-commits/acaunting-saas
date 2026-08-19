@@ -28,19 +28,33 @@ export default async function UploadPage() {
     )
   }
 
-  // Fetch subscription and usage to determine if limit is reached
-  const { data: subscription } = await supabase
+  // Fetch subscription with explicit zero-trust resolution via organization_id
+  const { data: subscriptionData } = await supabase
     .from("subscriptions")
-    .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit, name)")
+    .select("plan_id, current_period_start, current_period_end, status")
     .eq("organization_id", profile.organization_id)
     .in("status", ["active", "trialing"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  const plan = subscription?.subscription_plans as unknown as { document_limit: number; name: string } | null
-  const documentLimit = plan?.document_limit ?? 5
-  const periodStart = subscription?.current_period_start ?? new Date(0).toISOString()
+  let documentLimit = 5
+  let planName = "Başlanğıc"
+
+  if (subscriptionData?.plan_id) {
+    const { data: planData } = await supabase
+      .from("subscription_plans")
+      .select("document_limit, name")
+      .eq("id", subscriptionData.plan_id)
+      .single()
+
+    if (planData) {
+      documentLimit = planData.document_limit
+      planName = planData.name
+    }
+  }
+
+  const periodStart = subscriptionData?.current_period_start ?? new Date(0).toISOString()
 
   // Count documents in current billing period
   const { count: currentUsage } = await supabase
@@ -62,7 +76,7 @@ export default async function UploadPage() {
         limitExceeded={limitExceeded}
         currentUsage={usage}
         monthlyLimit={documentLimit}
-        planName={plan?.name ?? "Başlanğıc"}
+        planName={planName}
       />
     </div>
   )

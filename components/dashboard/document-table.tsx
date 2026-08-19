@@ -192,7 +192,7 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
         <FileText className="w-10 h-10 text-slate-300" />
         <p className="text-slate-500 font-medium">Hələ sənəd yüklənməyib</p>
         <Button asChild size="sm" variant="outline">
-          <Link href="/upload">İlk sənədi yüklə</Link>
+          <Link href="/upload" prefetch={true}>İlk sənədi yüklə</Link>
         </Button>
       </div>
     )
@@ -358,7 +358,7 @@ export function DocumentTable({ documents, totalCount, currentPage, pageSize }: 
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Link href={`/documents/${doc.id}`}>
+                        <Link href={`/documents/${doc.id}`} prefetch={true}>
                           <Button size="icon" variant="ghost">
                             <Eye className="w-4 h-4" />
                           </Button>

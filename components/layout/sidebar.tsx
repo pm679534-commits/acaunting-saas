@@ -42,7 +42,7 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <Link href="/dashboard" className="flex items-center gap-2.5 px-2 mb-8" onClick={() => setMobileOpen(false)}>
+        <Link href="/dashboard" prefetch={true} className="flex items-center gap-2.5 px-2 mb-8" onClick={() => setMobileOpen(false)}>
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <FileText className="w-4 h-4 text-white" />
           </div>
@@ -56,6 +56,7 @@ export function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                prefetch={true}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",

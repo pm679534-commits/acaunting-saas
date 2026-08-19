@@ -28,29 +28,39 @@ export default async function SettingsPage() {
     )
   }
 
-  // Fetch subscription, plans, and usage in parallel
-  const [subscriptionResult, plansResult] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("*, subscription_plans(*)")
-      .eq("organization_id", profile.organization_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
+  // Fetch subscription with explicit zero-trust resolution via organization_id
+  const { data: subscriptionData } = await supabase
+    .from("subscriptions")
+    .select("plan_id, status, current_period_start, current_period_end, created_at")
+    .eq("organization_id", profile.organization_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let currentPlan: { id: string; name: string; price_azn: number; document_limit: number; features: unknown } | null = null
+
+  if (subscriptionData?.plan_id) {
+    const { data: planData } = await supabase
       .from("subscription_plans")
       .select("*")
-      .order("price_azn", { ascending: true })
-  ])
+      .eq("id", subscriptionData.plan_id)
+      .single()
 
-  const subscription = subscriptionResult.data
-  const plans = plansResult.data
+    if (planData) {
+      currentPlan = planData
+    }
+  }
+
+  const { data: allPlans } = await supabase
+    .from("subscription_plans")
+    .select("*")
+    .order("price_azn", { ascending: true })
 
   const { count: usageCount } = await supabase
     .from("usage_logs")
     .select("*", { count: "exact", head: true })
     .eq("organization_id", profile.organization_id)
-    .gte("billing_period_start", subscription?.current_period_start ?? new Date(0).toISOString())
+    .gte("billing_period_start", subscriptionData?.current_period_start ?? new Date(0).toISOString())
 
   const orgData = profile?.organizations as unknown as { name: string; preferred_model: string } | null
   const orgName = orgData?.name ?? ""
@@ -61,11 +71,11 @@ export default async function SettingsPage() {
     <div>
       <PageHeader title="Parametrlər" description="Abunəlik planı və hesab məlumatları" />
       <BillingSection
-        currentPlan={subscription?.subscription_plans as Record<string, unknown> | null}
-        subscriptionStatus={subscription?.status ?? "active"}
-        periodEnd={subscription?.current_period_end ?? ""}
+        currentPlan={currentPlan}
+        subscriptionStatus={subscriptionData?.status ?? "active"}
+        periodEnd={subscriptionData?.current_period_end ?? ""}
         usageCount={usageCount ?? 0}
-        allPlans={plans ?? []}
+        allPlans={allPlans ?? []}
         orgName={orgName}
         userEmail={user.email ?? ""}
         preferredModel={preferredModel}

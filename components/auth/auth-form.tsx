@@ -31,48 +31,76 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError(null)
     setLoading(true)
 
+    const timeoutId = setTimeout(() => {
+      setError("Əməliyyat çox uzun çəkir. Şəbəkə bağlantınızı yoxlayın.")
+      setLoading(false)
+    }, 15000)
+
     try {
       if (mode === "signup") {
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const signUpPromise = supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: fullName } },
         })
 
+        const { data, error: signUpError } = await Promise.race([
+          signUpPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Qeydiyyat əməliyyatı vaxt limiti keçdi")), 12000)
+          ),
+        ])
+
         if (signUpError) throw signUpError
         if (!data.user) throw new Error("İstifadəçi yaradılmadı")
 
-        // Detect if email already exists (Supabase may return success with empty identities)
         if (data.user && data.user.identities && data.user.identities.length === 0) {
           throw new Error("Bu email ilə artıq hesab mövcuddur. Zəhmət olmasa daxil olun.")
         }
 
-        const res = await fetch("/api/auth/setup-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullName, orgName, userId: data.user.id }),
-        })
+        const profileResponse = await Promise.race([
+          fetch("/api/auth/setup-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullName, orgName, userId: data.user.id }),
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Profil qurulması vaxt limiti keçdi")), 10000)
+          ),
+        ])
 
-        if (!res.ok) {
-          const body = await res.json()
-          // Check for duplicate profile error
+        if (!profileResponse.ok) {
+          const body = await profileResponse.json()
           if (body.alreadyExists) {
             throw new Error("Bu email ilə artıq hesab mövcuddur. Zəhmət olmasa daxil olun.")
           }
           throw new Error(body.error ?? "Profil qurulmadı")
         }
 
+        clearTimeout(timeoutId)
         router.push("/dashboard")
         router.refresh()
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        const signInPromise = supabase.auth.signInWithPassword({ email, password })
+
+        const { error: signInError } = await Promise.race([
+          signInPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Giriş əməliyyatı vaxt limiti keçdi")), 12000)
+          ),
+        ])
+
         if (signInError) throw signInError
+
+        clearTimeout(timeoutId)
         router.push("/dashboard")
         router.refresh()
       }
     } catch (err) {
+      clearTimeout(timeoutId)
       setError(err instanceof Error ? err.message : "Xəta baş verdi")
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
     }
   }

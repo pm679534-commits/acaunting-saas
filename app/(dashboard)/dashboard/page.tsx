@@ -54,7 +54,7 @@ export default async function DashboardPage({
 
   let query = supabase
     .from("documents")
-    .select("*, document_line_items(line_number, description, amount, currency, date, category, quantity, unit)", { count: "exact" })
+    .select("id, original_filename, status, file_size_bytes, created_at, raw_extraction, edited_fields, document_line_items(line_number, description, amount, currency, date, category, quantity, unit)", { count: "exact" })
     .eq("organization_id", profile.organization_id)
     .order("created_at", { ascending: false })
     .range(from, to)
@@ -68,31 +68,45 @@ export default async function DashboardPage({
 
   const { data: documents, count } = await query
 
-  // Fetch subscription and usage in parallel — include trialing so new users see their plan
-  const [subscriptionResult] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("plan_id, current_period_start, current_period_end, subscription_plans(document_limit, name)")
-      .eq("organization_id", profile.organization_id)
-      .in("status", ["active", "trialing"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ])
+  // Fetch subscription with explicit zero-trust resolution via organization_id
+  const { data: subscriptionData } = await supabase
+    .from("subscriptions")
+    .select(`
+      plan_id,
+      current_period_start,
+      current_period_end,
+      status
+    `)
+    .eq("organization_id", profile.organization_id)
+    .in("status", ["active", "trialing"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  const subscription = subscriptionResult.data
+  let planLimit = 5
+  let planName = "Başlanğıc"
 
-  // Only fetch usage count if subscription exists
-  const usageCount = subscription
-    ? (await supabase
-        .from("usage_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", profile.organization_id)
-        .gte("billing_period_start", subscription.current_period_start ?? new Date(0).toISOString())).count
-    : 0
+  if (subscriptionData?.plan_id) {
+    const { data: planData } = await supabase
+      .from("subscription_plans")
+      .select("document_limit, name")
+      .eq("id", subscriptionData.plan_id)
+      .single()
 
-  const plan = subscription?.subscription_plans as unknown as { document_limit: number; name: string } | null
-  const limitExceeded = (usageCount ?? 0) >= (plan?.document_limit ?? 5)
+    if (planData) {
+      planLimit = planData.document_limit
+      planName = planData.name
+    }
+  }
+
+  // Fetch usage count for current billing period
+  const { count: usageCount } = await supabase
+    .from("usage_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", profile.organization_id)
+    .gte("billing_period_start", subscriptionData?.current_period_start ?? new Date(0).toISOString())
+
+  const limitExceeded = (usageCount ?? 0) >= planLimit
 
   return (
     <div>
@@ -101,7 +115,7 @@ export default async function DashboardPage({
         description="Yüklənmiş sənədlərinizin siyahısı"
       >
         <Button asChild disabled={limitExceeded}>
-          <Link href="/upload">
+          <Link href="/upload" prefetch={true}>
             <Upload className="w-4 h-4" />
             Sənəd yüklə
           </Link>
@@ -110,8 +124,8 @@ export default async function DashboardPage({
 
       <UsageMeter
         used={usageCount ?? 0}
-        limit={plan?.document_limit ?? 5}
-        planName={plan?.name ?? "Başlanğıc"}
+        limit={planLimit}
+        planName={planName}
       />
 
       <div className="mt-6">

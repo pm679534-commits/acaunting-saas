@@ -163,7 +163,7 @@ export function Dropzone({ limitExceeded, currentUsage, monthlyLimit, planName }
                 {currentUsage}/{monthlyLimit} sənəd istifadə edilib ({planName} planı). Yeni sənəd yükləmək üçün planınızı yüksəldin.
               </p>
               <Button asChild size="sm" variant="default">
-                <Link href="/settings">Planı yüksəlt</Link>
+                <Link href="/settings" prefetch={true}>Planı yüksəlt</Link>
               </Button>
             </div>
           </div>
@@ -319,7 +319,7 @@ export function Dropzone({ limitExceeded, currentUsage, monthlyLimit, planName }
           </DialogHeader>
           <div className="flex gap-3 mt-4">
             <Button asChild className="flex-1">
-              <Link href="/settings">Planı yüksəlt</Link>
+              <Link href="/settings" prefetch={true}>Planı yüksəlt</Link>
             </Button>
             <Button variant="outline" onClick={() => setShowLimitDialog(false)} className="flex-1">
               Bağla

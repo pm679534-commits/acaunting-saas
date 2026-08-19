@@ -56,7 +56,7 @@ export function TopNav({ orgName, userEmail }: TopNavProps) {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/settings">
+            <Link href="/settings" prefetch={true}>
               <Settings className="mr-2 h-4 w-4" />
               Parametrlər
             </Link>

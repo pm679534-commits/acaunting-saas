@@ -45,7 +45,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     <div>
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild className="text-slate-500 -ml-2">
-          <Link href="/dashboard">
+          <Link href="/dashboard" prefetch={true}>
             <ArrowLeft className="w-4 h-4" />
             Geri qayıt
           </Link>
