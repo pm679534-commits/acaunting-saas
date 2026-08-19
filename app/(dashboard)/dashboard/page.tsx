@@ -68,7 +68,7 @@ export default async function DashboardPage({
 
   const { data: documents, count } = await query
 
-  // Fetch subscription with explicit zero-trust resolution via organization_id
+  // Fetch active subscription with explicit zero-trust resolution via organization_id
   const { data: subscriptionData } = await supabase
     .from("subscriptions")
     .select(`
@@ -83,20 +83,46 @@ export default async function DashboardPage({
     .limit(1)
     .maybeSingle()
 
-  let planLimit = 5
-  let planName = "Başlanğıc"
+  // Resolve plan details from subscription_plans table (no hardcoded fallbacks)
+  let planLimit: number
+  let planName: string
+  let periodStart: string
 
   if (subscriptionData?.plan_id) {
-    const { data: planData } = await supabase
+    // User has an active subscription - fetch the plan details
+    const { data: planData, error: planError } = await supabase
       .from("subscription_plans")
       .select("document_limit, name")
       .eq("id", subscriptionData.plan_id)
       .single()
 
-    if (planData) {
+    if (planError || !planData) {
+      // Subscription plan_id is invalid - fallback to database starter plan
+      const { data: starterPlan } = await supabase
+        .from("subscription_plans")
+        .select("document_limit, name")
+        .eq("id", "starter")
+        .single()
+
+      planLimit = starterPlan?.document_limit ?? 5
+      planName = starterPlan?.name ?? "Başlanğıc"
+    } else {
       planLimit = planData.document_limit
       planName = planData.name
     }
+
+    periodStart = subscriptionData.current_period_start
+  } else {
+    // No active subscription - fetch starter plan from database
+    const { data: starterPlan } = await supabase
+      .from("subscription_plans")
+      .select("document_limit, name")
+      .eq("id", "starter")
+      .single()
+
+    planLimit = starterPlan?.document_limit ?? 5
+    planName = starterPlan?.name ?? "Başlanğıc"
+    periodStart = new Date(0).toISOString()
   }
 
   // Fetch usage count for current billing period
@@ -104,7 +130,7 @@ export default async function DashboardPage({
     .from("usage_logs")
     .select("*", { count: "exact", head: true })
     .eq("organization_id", profile.organization_id)
-    .gte("billing_period_start", subscriptionData?.current_period_start ?? new Date(0).toISOString())
+    .gte("billing_period_start", periodStart)
 
   const limitExceeded = (usageCount ?? 0) >= planLimit
 
