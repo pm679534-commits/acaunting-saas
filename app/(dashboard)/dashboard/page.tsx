@@ -69,7 +69,7 @@ export default async function DashboardPage({
   const { data: documents, count } = await query
 
   // Fetch active subscription with explicit zero-trust resolution via organization_id
-  const { data: subscriptionData } = await supabase
+  const { data: subscriptionData, error: subscriptionError } = await supabase
     .from("subscriptions")
     .select(`
       plan_id,
@@ -83,12 +83,20 @@ export default async function DashboardPage({
     .limit(1)
     .maybeSingle()
 
+  if (subscriptionError) {
+    console.error("[Dashboard] Subscription query error:", subscriptionError)
+  }
+
+  console.log("[Dashboard] Subscription data:", JSON.stringify(subscriptionData, null, 2))
+
   // Resolve plan details from subscription_plans table (no hardcoded fallbacks)
   let planLimit: number
   let planName: string
   let periodStart: string
 
   if (subscriptionData?.plan_id) {
+    console.log("[Dashboard] Fetching plan for plan_id:", subscriptionData.plan_id)
+
     // User has an active subscription - fetch the plan details
     const { data: planData, error: planError } = await supabase
       .from("subscription_plans")
@@ -96,7 +104,12 @@ export default async function DashboardPage({
       .eq("id", subscriptionData.plan_id)
       .single()
 
+    console.log("[Dashboard] Plan data:", JSON.stringify(planData, null, 2))
+    console.log("[Dashboard] Plan error:", planError)
+
     if (planError || !planData) {
+      console.error("[Dashboard] Plan lookup failed, falling back to starter")
+
       // Subscription plan_id is invalid - fallback to database starter plan
       const { data: starterPlan } = await supabase
         .from("subscription_plans")
@@ -113,6 +126,8 @@ export default async function DashboardPage({
 
     periodStart = subscriptionData.current_period_start
   } else {
+    console.log("[Dashboard] No active subscription found, using starter plan")
+
     // No active subscription - fetch starter plan from database
     const { data: starterPlan } = await supabase
       .from("subscription_plans")
@@ -124,6 +139,8 @@ export default async function DashboardPage({
     planName = starterPlan?.name ?? "Başlanğıc"
     periodStart = new Date(0).toISOString()
   }
+
+  console.log("[Dashboard] Final values - planName:", planName, "planLimit:", planLimit)
 
   // Fetch usage count for current billing period
   const { count: usageCount } = await supabase
